@@ -90,6 +90,7 @@ class MainWindow(QtWidgets.QMainWindow):
     def __init__(self):
         super().__init__()
         self.setWindowTitle(APP_NAME)
+        
         self.setWindowIcon(QtGui.QIcon("icons/app.ico"))   # PENCERE İKONU
         self.setFixedSize(500, 300)
         self.settings = QtCore.QSettings(ORG, APP)
