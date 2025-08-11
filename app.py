@@ -1,4 +1,4 @@
-# modern_app.py — PyQt5 ile modern, şık kısayol paneli (500x300 pencere boyutu, sağ üstte açılır, ikonlu butonlar)
+# modern_app_with_menu.py — PyQt5 kısayol paneli (500x300, sağ üstte açılır, üst bar + Ayarlar menüsü, ikonlu butonlar)
 # Kurulum: pip install pyqt5 keyboard pyautogui
 
 import sys, json, time, threading, subprocess, webbrowser
@@ -39,7 +39,8 @@ def run_action(a: dict):
     t = (a.get("type") or "").lower()
     if t == "open":
         tgt = a.get("target", "")
-        if tgt.startswith("http"): webbrowser.open(tgt)
+        if tgt.startswith("http"):
+            webbrowser.open(tgt)
         else:
             p = Path(tgt)
             try:
@@ -60,13 +61,15 @@ class CardButton(QtWidgets.QPushButton):
         self.p = palette
         self.setCursor(QtCore.Qt.PointingHandCursor)
         self.setMinimumHeight(60)
-        self.setIconSize(QtCore.QSize(48, 48))
+        self.setIconSize(QtCore.QSize(40, 40))
         self.setStyleSheet(self._style())
 
         icon_path = data.get("icon")
         if icon_path and Path(icon_path).exists():
             self.setIcon(QtGui.QIcon(icon_path))
+            self.setText("")  # ikon-only
         else:
+            # İkon yoksa label göster
             self.setText(data.get("label", "?"))
 
         self.clicked.connect(lambda: run_action(self.data))
@@ -78,8 +81,10 @@ class CardButton(QtWidgets.QPushButton):
             background:{p['card_bg']};
             border:1px solid {p['card_border']};
             border-radius:10px;
-            padding:8px;
+            padding:10px;
             text-align:center;
+            color:{p['fg']};
+            font-size:13px;
         }}
         QPushButton:hover {{
             background:{p['card_hover']};
@@ -93,25 +98,63 @@ class MainWindow(QtWidgets.QMainWindow):
         self.setWindowIcon(self.style().standardIcon(QtWidgets.QStyle.SP_DesktopIcon))
         self.setFixedSize(500, 300)
 
-        screen_geo = QtWidgets.QApplication.primaryScreen().availableGeometry()
-        x = screen_geo.width() - self.width()
-        y = 0
-        self.move(x, y)
-
         self.settings = QtCore.QSettings(ORG, APP)
         self.theme = self.settings.value("theme", "light")
+        self.start_top_right = self.settings.value("start_top_right", True, type=bool)
         self.palette = DARK if self.theme == "dark" else LIGHT
+
+        # Konum: sağ üst (isteğe bağlı)
+        if self.start_top_right:
+            screen_geo = QtWidgets.QApplication.primaryScreen().availableGeometry()
+            x = screen_geo.width() - self.width()
+            y = 0
+            self.move(x, y)
 
         self._build_ui()
         self._apply_theme()
         self._load_and_build()
         self._start_hotkeys()
 
+    # --- Menü ve toolbar ---
     def _build_ui(self):
+        # Menü Çubuğu
+        mb = self.menuBar()
+        menu_settings = mb.addMenu("Ayarlar")
+
+        # Tema toggle
+        self.act_theme_dark = QtWidgets.QAction("Koyu Tema", self, checkable=True)
+        self.act_theme_dark.setChecked(self.theme == "dark")
+        self.act_theme_dark.toggled.connect(self._toggle_theme_from_menu)
+        menu_settings.addAction(self.act_theme_dark)
+
+        # Başlangıç konumu
+        self.act_top_right = QtWidgets.QAction("Başlangıçta sağ üstte aç", self, checkable=True)
+        self.act_top_right.setChecked(self.start_top_right)
+        self.act_top_right.toggled.connect(self._toggle_top_right)
+        menu_settings.addAction(self.act_top_right)
+
+        menu_settings.addSeparator()
+
+        # Config işlemleri
+        act_open_cfg = QtWidgets.QAction("actions.json'i aç", self)
+        act_open_cfg.triggered.connect(self._open_config)
+        menu_settings.addAction(act_open_cfg)
+
+        act_reload = QtWidgets.QAction("Yapılandırmayı Yenile", self)
+        act_reload.triggered.connect(self._reload_config)
+        menu_settings.addAction(act_reload)
+
+        menu_settings.addSeparator()
+
+        act_quit = QtWidgets.QAction("Çıkış", self)
+        act_quit.triggered.connect(QtWidgets.qApp.quit)
+        menu_settings.addAction(act_quit)
+
+        # Merkez içerik
         central = QtWidgets.QWidget()
         self.setCentralWidget(central)
         v = QtWidgets.QVBoxLayout(central)
-        v.setContentsMargins(8, 8, 8, 8)
+        v.setContentsMargins(8, 4, 8, 8)
 
         self.scroll = QtWidgets.QScrollArea()
         self.scroll.setWidgetResizable(True)
@@ -128,13 +171,27 @@ class MainWindow(QtWidgets.QMainWindow):
         self.scroll.setWidget(self.canvas)
         v.addWidget(self.scroll)
 
+        # StatusBar (isteğe bağlı, minimal)
+        self.status = self.statusBar()
+        self.status.showMessage("Hazır")
+
     def _apply_theme(self):
         p = self.palette
         base_qss = GLOBAL_QSS + f"""
         QMainWindow {{ background:{p['bg']}; }}
-        QLineEdit {{ background:{p['input_bg']}; color:{p['fg']}; border:1px solid {p['input_border']}; border-radius:8px; padding:4px; }}
+        QMenuBar {{ background:transparent; }}
+        QMenuBar::item {{ padding: 6px 10px; color:{p['fg']}; }}
+        QMenu {{ background:{p['card_bg']}; border:1px solid {p['card_border']}; }}
+        QMenu::item:selected {{ background:{p['card_hover']}; }}
+        QStatusBar {{ background:transparent; color:{p['muted']}; }}
         """
         self.setStyleSheet(base_qss)
+
+    def _open_config(self):
+        if CONFIG_PATH.exists():
+            QtGui.QDesktopServices.openUrl(QtCore.QUrl.fromLocalFile(str(CONFIG_PATH)))
+        else:
+            QtWidgets.QMessageBox.information(self, "Bilgi", "actions.json bulunamadı.")
 
     def _load_and_build(self):
         self.cfg = load_config()
@@ -150,22 +207,31 @@ class MainWindow(QtWidgets.QMainWindow):
     def _rebuild_cards(self):
         self._clear_grid()
         items = self.cfg.get("buttons", [])
-        cols = max(1, self.width() // 100)
+        # 500x300 pencerede makul kolon sayısı (ikonlu küçük kartlar)
+        cols = 5  # 5 sütun, 2-3 satır sığar
         row = col = 0
         for b in items:
             card = CardButton(b, self.palette)
+            # küçük ikon ızgara görünümü için min boyut
+            card.setMinimumSize(80, 80)
             self.grid.addWidget(card, row, col)
             col += 1
             if col >= cols:
                 col = 0; row += 1
 
-    def _toggle_theme(self):
-        self.theme = "dark" if self.theme == "light" else "light"
+    # --- Menü aksiyonları ---
+    def _toggle_theme_from_menu(self, checked: bool):
+        self.theme = "dark" if checked else "light"
         self.settings.setValue("theme", self.theme)
         self.palette = DARK if self.theme == "dark" else LIGHT
         self._apply_theme()
         self._rebuild_cards()
 
+    def _toggle_top_right(self, checked: bool):
+        self.start_top_right = checked
+        self.settings.setValue("start_top_right", checked)
+
+    # --- Hotkeys ---
     def _start_hotkeys(self):
         self.hk_thread = threading.Thread(target=self._register_hotkeys, daemon=True)
         self.hk_thread.start()
@@ -184,6 +250,7 @@ class MainWindow(QtWidgets.QMainWindow):
                 pass
         try: keyboard.wait(suppress=False)
         except Exception: pass
+
 
 def main():
     if hasattr(QtWidgets.QApplication, "setAttribute"):
