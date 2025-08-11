@@ -1,52 +1,147 @@
-# app.py — PyQt5 kısayol paneli (tooltip + dinamik ikonlar)
+# app.py — PyQt5 kısayol paneli (frameless + özel üst bar + dinamik menü ikonları)
 import sys, json, time, threading, subprocess, webbrowser
 from pathlib import Path
 from PyQt5 import QtCore, QtGui, QtWidgets
 import pyautogui, keyboard
 
-APP_NAME = "Kısayol Paneli"
-APP_ID   = "ViperaDev.KisayolPaneli"   # Windows görev çubuğu için (opsiyonel ama tavsiye)
-ORG = "ViperaDev"
-APP = "ShortcutPanel"
+APP_NAME   = "Kısayol Paneli"
+ORG        = "ViperaDev"
+APP        = "ShortcutPanel"
 CONFIG_PATH = Path(__file__).with_name("actions.json")
 
+LIGHT = {"bg": "#f5f7fa", "fg": "#1e293b", "muted": "#64748b",
+         "card_bg": "#ffffff", "card_border": "#e2e8f0", "card_hover": "#f1f5f9",
+         "menu_bg": "#ffffff", "menu_border": "#e2e8f0", "text_color": "#000000"}
+DARK  = {"bg": "#0f172a", "fg": "#e2e8f0", "muted": "#94a3b8",
+         "card_bg": "#1e293b", "card_border": "#334155", "card_hover": "#273449",
+         "menu_bg": "#111827", "menu_border": "#334155", "text_color": "#ffffff"}
 
-
-# (Windows'ta görev çubuğu doğru ikonu göstersin diye AppUserModelID verelim)
-try:
-    import ctypes, sys
-    if sys.platform.startswith("win"):
-        ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID(APP_ID)
-except Exception:
-    pass
-
-
-
-LIGHT = {"bg": "#f5f7fa", "fg": "#1e293b", "muted": "#64748b", "card_bg": "#ffffff", "card_border": "#e2e8f0", "card_hover": "#f1f5f9", "menu_bg": "#ffffff", "menu_border": "#e2e8f0", "text_color": "#000000"}
-DARK = {"bg": "#0f172a", "fg": "#e2e8f0", "muted": "#94a3b8", "card_bg": "#1e293b", "card_border": "#334155", "card_hover": "#273449", "menu_bg": "#111827", "menu_border": "#334155", "text_color": "#ffffff"}
-
+# ---------------- Yardımcılar ----------------
 def load_config():
     try:
         with open(CONFIG_PATH, "r", encoding="utf-8") as f:
             return json.load(f)
-    except:
+    except Exception:
         return {"buttons": [], "hotkeys": {}}
 
-def open_target(target):
-    if not target: return
+def open_target(target: str):
+    if not target:
+        return
     if target.startswith(("http://", "https://")):
         webbrowser.open(target); return
-    try: subprocess.Popen([target], shell=True)
-    except: webbrowser.open(target)
+    try:
+        subprocess.Popen([target], shell=True)
+    except Exception:
+        try: webbrowser.open(target)
+        except Exception: pass
 
-def run_action(a):
+def run_action(a: dict):
     t = (a.get("type") or "").lower()
-    if t == "open": open_target(a.get("target", ""))
+    if t == "open":
+        open_target(a.get("target", ""))
     elif t == "keys":
         time.sleep(0.03)
         seq = a.get("keys", [])
-        if seq: pyautogui.hotkey(*seq)
+        if seq:
+            try: pyautogui.hotkey(*seq)
+            except Exception: pass
 
+# ---------------- Özel Üst Bar ----------------
+class TitleBar(QtWidgets.QWidget):
+    minimizeRequested = QtCore.pyqtSignal()
+    closeRequested = QtCore.pyqtSignal()
+
+    def __init__(self, title: str, icon_path: str = None, parent=None):
+        super().__init__(parent)
+        self._drag = False
+        self._drag_offset = QtCore.QPoint()
+
+        self.setFixedHeight(36)
+        self.setSizePolicy(QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Fixed)
+
+        # Sol: ikon + başlık
+        self.icon = QtWidgets.QLabel()
+        self.icon.setFixedSize(18, 18)
+        if icon_path and Path(icon_path).exists():
+            self.icon.setPixmap(QtGui.QPixmap(icon_path).scaled(18, 18, QtCore.Qt.KeepAspectRatio, QtCore.Qt.SmoothTransformation))
+
+        self.title = QtWidgets.QLabel(title)
+        self.title.setObjectName("windowTitleLabel")
+
+        left = QtWidgets.QHBoxLayout()
+        left.setContentsMargins(8, 0, 0, 0)
+        left.setSpacing(8)
+        left.addWidget(self.icon)
+        left.addWidget(self.title)
+        leftWrap = QtWidgets.QWidget(); leftWrap.setLayout(left)
+
+        # Sağ: SADECE küçült ve kapat
+        self.btnMin = QtWidgets.QToolButton()
+        self.btnMin.setToolTip("Küçült")
+        self.btnMin.setIcon(self.style().standardIcon(QtWidgets.QStyle.SP_TitleBarMinButton))
+        self.btnMin.clicked.connect(self.minimizeRequested)
+
+        self.btnClose = QtWidgets.QToolButton()
+        self.btnClose.setToolTip("Kapat")
+        self.btnClose.setIcon(self.style().standardIcon(QtWidgets.QStyle.SP_TitleBarCloseButton))
+        self.btnClose.clicked.connect(self.closeRequested)
+
+        btns = QtWidgets.QHBoxLayout()
+        btns.setContentsMargins(0, 0, 4, 0)
+        btns.setSpacing(2)
+        for b in (self.btnMin, self.btnClose):
+            b.setFixedSize(30, 24)
+            btns.addWidget(b)
+        rightWrap = QtWidgets.QWidget(); rightWrap.setLayout(btns)
+
+        # Ana düzen
+        h = QtWidgets.QHBoxLayout(self)
+        h.setContentsMargins(0, 0, 0, 0)
+        h.setSpacing(0)
+        h.addWidget(leftWrap)
+        h.addStretch(1)  # sürükleme alanı
+        h.addWidget(rightWrap)
+
+        self.applyStyle(dark=False)
+
+    def applyStyle(self, dark: bool):
+        if dark:
+            bg = "#0f172a"; fg = "#e2e8f0"; hover = "#1e293b"
+        else:
+            bg = "#f5f7fa"; fg = "#1e293b"; hover = "#e9eef6"
+        self.setStyleSheet(f"""
+            TitleBar {{ background:{bg}; border-bottom:1px solid rgba(0,0,0,0.08); }}
+            #windowTitleLabel {{ color:{fg}; font-weight:600; }}
+            QToolButton {{ border:0; background:transparent; }}
+            QToolButton:hover {{ background:{hover}; border-radius:6px; }}
+        """)
+
+    # Sürükleme
+    def mousePressEvent(self, e: QtGui.QMouseEvent):
+        if e.button() == QtCore.Qt.LeftButton:
+            self._drag = True
+            self._drag_offset = e.globalPos() - self.window().frameGeometry().topLeft()
+            e.accept()
+        else:
+            super().mousePressEvent(e)
+
+    def mouseMoveEvent(self, e: QtGui.QMouseEvent):
+        if self._drag and e.buttons() & QtCore.Qt.LeftButton:
+            self.window().move(e.globalPos() - self._drag_offset)
+            e.accept()
+        else:
+            super().mouseMoveEvent(e)
+
+    def mouseReleaseEvent(self, e: QtGui.QMouseEvent):
+        self._drag = False
+        super().mouseReleaseEvent(e)
+
+    # Çift tıkta artık hiçbir şey yapma (büyüt/geri al yok)
+    def mouseDoubleClickEvent(self, e: QtGui.QMouseEvent):
+        e.ignore()
+
+
+# ---------------- Kart Buton ----------------
 class CardButton(QtWidgets.QPushButton):
     def __init__(self, data, palette):
         super().__init__()
@@ -58,12 +153,11 @@ class CardButton(QtWidgets.QPushButton):
         self.apply_style()
 
         label_text = data.get("label", "?")
-        self.setToolTip(label_text)  # Tooltip
+        self.setToolTip(label_text)
 
         icon_path = data.get("icon")
         if icon_path and Path(icon_path).exists():
-            self.setIcon(QtGui.QIcon(icon_path))
-            self.setText("")
+            self.setIcon(QtGui.QIcon(icon_path)); self.setText("")
         else:
             self.setText(label_text)
 
@@ -81,107 +175,132 @@ class CardButton(QtWidgets.QPushButton):
                 color:{p['text_color']};
                 font-size:13px;
             }}
-            QPushButton:hover {{
-                background:{p['card_hover']};
-            }}
+            QPushButton:hover {{ background:{p['card_hover']}; }}
         """)
 
+# ---------------- Ana Pencere ----------------
 class MainWindow(QtWidgets.QMainWindow):
     def __init__(self):
         super().__init__()
         self.setWindowTitle(APP_NAME)
-        
-        self.setWindowIcon(QtGui.QIcon("icons/app.ico"))   # PENCERE İKONU
-        self.setFixedSize(500, 300)
+        self.setFixedSize(500, 325)
+
+        # Başlık çubuğunu kaldır (frameless)
+        self.setWindowFlags(self.windowFlags() | QtCore.Qt.FramelessWindowHint)
+
+        # Kısayollar
+        QtWidgets.QShortcut(QtGui.QKeySequence("Esc"), self, activated=self.close)
+        QtWidgets.QShortcut(QtGui.QKeySequence("Ctrl+M"), self, activated=self.showMinimized)
+
+        # Ayarlar
         self.settings = QtCore.QSettings(ORG, APP)
         self.theme = self.settings.value("theme", "light")
         self.start_top_right = self.settings.value("start_top_right", True, type=bool)
         self.saved_monitor_name = self.settings.value("monitor_name", "", type=str)
+
         self.palette = DARK if self.theme == "dark" else LIGHT
         self.enable_hotkeys = False
-        self._build_menubar()
+
+        # Özel üst bar + menü bar’ı birlikte yerleştir
+        self.titleBar = TitleBar(APP_NAME, icon_path="icons/app.ico")
+        self.titleBar.setToolTip("Pencereyi sürüklemek için tutun")
+        self.titleBar.minimizeRequested.connect(self.showMinimized)
+        self.titleBar.closeRequested.connect(self.close)
+
+
+        self.menubar = QtWidgets.QMenuBar()  # self.menuBar() yerine manuel menü
+        self._build_menubar(self.menubar)
+
+        top_container = QtWidgets.QWidget()
+        top_layout = QtWidgets.QVBoxLayout(top_container)
+        top_layout.setContentsMargins(0, 0, 0, 0)
+        top_layout.setSpacing(0)
+        top_layout.addWidget(self.titleBar)
+        top_layout.addWidget(self.menubar)
+        self.setMenuWidget(top_container)
+
         self._build_ui()
         self._apply_theme()
+
         self.cfg = load_config()
         self._rebuild_cards()
+
         QtWidgets.QApplication.instance().screenAdded.connect(lambda s: self._rebuild_monitor_menu())
         QtWidgets.QApplication.instance().screenRemoved.connect(lambda s: self._rebuild_monitor_menu())
         self._rebuild_monitor_menu()
+
         if self.start_top_right:
             QtCore.QTimer.singleShot(0, self._move_to_selected_screen_top_right)
 
-    def _build_menubar(self):
-        mb = self.menuBar()
+    def _toggle_max_restore(self):
+        if self.isMaximized():
+            self.showNormal()
+            self.titleBar.setMaximizedState(False)
+        else:
+            self.showMaximized()
+            self.titleBar.setMaximizedState(True)
 
+    # --------- MENÜ ---------
+    def _build_menubar(self, mb: QtWidgets.QMenuBar):
         # Tema (dinamik ikon + tooltip)
         self.act_dark = QtWidgets.QAction("", self, checkable=True)
         self.act_dark.setChecked(self.theme == "dark")
         self.act_dark.toggled.connect(self._toggle_theme)
-        self.act_dark.setToolTip("Tema Değiştir")  # tooltip
+        self.act_dark.setToolTip("Tema Değiştir")
         mb.addAction(self.act_dark)
 
-        # Sağ üst konum (dinamik ikon + tooltip)
+        # Sağ üst (dinamik ikon + tooltip)
         self.act_topright = QtWidgets.QAction("", self, checkable=True)
         self.act_topright.setChecked(self.start_top_right)
         self.act_topright.toggled.connect(self._toggle_topright)
-        self.act_topright.setToolTip("Pencere Konumu")  # tooltip
+        self.act_topright.setToolTip("Pencere Konumu")
         mb.addAction(self.act_topright)
 
-        # Monitör menüsü (ikon + tooltip)
-        self.m_monitors = mb.addMenu(QtGui.QIcon("icons/screen.png"), "")
-        self.m_monitors.setToolTip("Monitör Seç")  # tooltip
+        # Monitör menüsü
+        self.m_monitors = QtWidgets.QMenu()
+        self.m_monitors.setToolTip("Monitör Seç")
+        self.m_monitors.setIcon(QtGui.QIcon("icons/screen.png"))
         self.monitor_group = QtWidgets.QActionGroup(self)
         self.monitor_group.setExclusive(True)
+        mb.addMenu(self.m_monitors)
 
-        # Config aç (ikon + tooltip)
-        act_open_cfg = QtWidgets.QAction(QtGui.QIcon("icons/jsondocument.png"), "", self)
-        act_open_cfg.triggered.connect(self._open_config)
-        act_open_cfg.setToolTip("Ayar Dosyasını Aç")  # tooltip
-        mb.addAction(act_open_cfg)
+        # Config aç
+        self.act_open_cfg = QtWidgets.QAction(QtGui.QIcon("icons/jsondocument.png"), "", self)
+        self.act_open_cfg.setToolTip("Ayar Dosyasını Aç")
+        self.act_open_cfg.triggered.connect(self._open_config)
+        mb.addAction(self.act_open_cfg)
 
-        # Yenile (ikon + tooltip)
-        act_reload = QtWidgets.QAction(QtGui.QIcon("icons/reload.png"), "", self)
-        act_reload.triggered.connect(self._reload_config)
-        act_reload.setToolTip("Kısayolları Yeniden Yükle")  # tooltip
-        mb.addAction(act_reload)
+        # Yenile
+        self.act_reload = QtWidgets.QAction(QtGui.QIcon("icons/reload.png"), "", self)
+        self.act_reload.setToolTip("Kısayolları Yeniden Yükle")
+        self.act_reload.triggered.connect(self._reload_config)
+        mb.addAction(self.act_reload)
 
-        # Çıkış (ikon + tooltip)
-        act_quit = QtWidgets.QAction(QtGui.QIcon("icons/exit.png"), "", self)
-        act_quit.triggered.connect(QtWidgets.qApp.quit)
-        act_quit.setToolTip("Uygulamadan Çık")  # tooltip
-        mb.addAction(act_quit)
+        # Çıkış
+        self.act_quit = QtWidgets.QAction(QtGui.QIcon("icons/exit.png"), "", self)
+        self.act_quit.setToolTip("Uygulamadan Çık")
+        self.act_quit.triggered.connect(QtWidgets.qApp.quit)
+        mb.addAction(self.act_quit)
 
         self.status = self.statusBar()
         self.status.showMessage("Hazır")
-        self._update_menu_icons()  # başlangıç ikonları
+        self._update_menu_icons()
 
     def _update_menu_icons(self):
-        # Tema ikonu + açıklayıcı tooltip
-        if self.theme == "dark":
-            self.act_dark.setIcon(QtGui.QIcon("icons/dark-theme.png"))
-            self.act_dark.setToolTip("Koyu Tema (tıkla: Aydınlık)")
-        else:
-            self.act_dark.setIcon(QtGui.QIcon("icons/light-theme.png"))
-            self.act_dark.setToolTip("Aydınlık Tema (tıkla: Koyu)")
+        theme_icon = "icons/dark-theme.png" if self.theme == "dark" else "icons/light-theme.png"
+        self.act_dark.setIcon(QtGui.QIcon(theme_icon))
+        self.act_dark.setToolTip("Koyu Tema (tıkla: Aydınlık)" if self.theme == "dark" else "Aydınlık Tema (tıkla: Koyu)")
 
-        # Konum ikonu + açıklayıcı tooltip
-        if self.start_top_right:
-            self.act_topright.setIcon(QtGui.QIcon("icons/topright.png"))
-            self.act_topright.setToolTip("Sağ Üstte Açık (tıkla: Serbest)")
-        else:
-            self.act_topright.setIcon(QtGui.QIcon("icons/free.png"))
-            self.act_topright.setToolTip("Serbest Konum (tıkla: Sağ Üst)")
+        pos_icon = "icons/topright.png" if self.start_top_right else "icons/free.png"
+        self.act_topright.setIcon(QtGui.QIcon(pos_icon))
+        self.act_topright.setToolTip("Sağ Üstte Açık (tıkla: Serbest)" if self.start_top_right else "Serbest Konum (tıkla: Sağ Üst)")
 
-    def _update_menu_icons(self):
-        # Tema ikonu
-        self.act_dark.setIcon(QtGui.QIcon("icons/dark-theme.png" if self.theme == "dark" else "icons/light-theme.png"))
-        # Sağ üst ikonu
-        self.act_topright.setIcon(QtGui.QIcon("icons/topright.png" if self.start_top_right else "icons/free.png"))
-
+    # --------- MONİTÖR ---------
     def _rebuild_monitor_menu(self):
         self.m_monitors.clear()
         self.monitor_group = QtWidgets.QActionGroup(self)
         self.monitor_group.setExclusive(True)
+
         screens = QtWidgets.QApplication.screens()
         selected_action = None
         for s in screens:
@@ -195,18 +314,21 @@ class MainWindow(QtWidgets.QMainWindow):
             self.m_monitors.addAction(act)
             if self.saved_monitor_name and s.name() == self.saved_monitor_name:
                 selected_action = act
+
         self.m_monitors.addSeparator()
         act_auto = QtWidgets.QAction("Otomatik (birincil)", self, checkable=True)
         act_auto.setData("")
         self.monitor_group.addAction(act_auto)
         self.m_monitors.addAction(act_auto)
+
         if selected_action:
             selected_action.setChecked(True)
         else:
             act_auto.setChecked(True)
+
         self.monitor_group.triggered.connect(self._on_monitor_chosen)
 
-    def _on_monitor_chosen(self, action):
+    def _on_monitor_chosen(self, action: QtWidgets.QAction):
         self.saved_monitor_name = action.data() or ""
         self.settings.setValue("monitor_name", self.saved_monitor_name)
         self._move_to_selected_screen_top_right()
@@ -223,35 +345,40 @@ class MainWindow(QtWidgets.QMainWindow):
         avail = target.availableGeometry()
         self.move(avail.right() - self.width(), avail.top())
 
+    # --------- UI ---------
     def _build_ui(self):
         central = QtWidgets.QWidget(); self.setCentralWidget(central)
         v = QtWidgets.QVBoxLayout(central); v.setContentsMargins(8, 4, 8, 8)
+
         self.scroll = QtWidgets.QScrollArea()
         self.scroll.setWidgetResizable(True)
         self.scroll.setFrameShape(QtWidgets.QFrame.NoFrame)
         self.scroll.setStyleSheet("QScrollArea{border:0;background:transparent;} QScrollArea>viewport{background:transparent;}")
+
         self.canvas = QtWidgets.QWidget(); self.canvas.setStyleSheet("background:transparent;")
         self.grid = QtWidgets.QGridLayout(self.canvas)
         self.grid.setContentsMargins(0, 0, 0, 0)
         self.grid.setHorizontalSpacing(8); self.grid.setVerticalSpacing(8)
-        self.scroll.setWidget(self.canvas); v.addWidget(self.scroll)
+
+        self.scroll.setWidget(self.canvas)
+        v.addWidget(self.scroll)
 
     def _apply_theme(self):
         p = self.palette
+        dark = (self.theme == "dark")
+        self.titleBar.applyStyle(dark)
         self.setStyleSheet(f"QMainWindow {{ background:{p['bg']}; }} QMenuBar {{ background:transparent; }}")
+        # kartların stilini yenile
         for i in range(self.grid.count()):
             w = self.grid.itemAt(i).widget()
             if isinstance(w, CardButton):
                 w.p = self.palette
                 w.apply_style()
+        # statusbar rengi
+        self.status.setStyleSheet(f"color:{p['text_color']};")
         self._update_menu_icons()
 
-    def _open_config(self):
-        if CONFIG_PATH.exists():
-            QtGui.QDesktopServices.openUrl(QtCore.QUrl.fromLocalFile(str(CONFIG_PATH)))
-        else:
-            QtWidgets.QMessageBox.information(self, "Bilgi", "actions.json bulunamadı.")
-
+    # --------- Grid ---------
     def _clear_grid(self):
         while self.grid.count():
             item = self.grid.takeAt(0)
@@ -260,64 +387,44 @@ class MainWindow(QtWidgets.QMainWindow):
 
     def _rebuild_cards(self):
         self._clear_grid()
-        buttons = self.cfg.get("buttons", [])
+        buttons = load_config().get("buttons", [])
         btn_w = 72; gap = 8; inner_w = self.width() - 16
         cols = max(3, min(6, (inner_w + gap) // (btn_w + gap)))
+
         row = col = 0
         for b in buttons:
             card = CardButton(b, self.palette)
             self.grid.addWidget(card, row, col)
             col += 1
             if col >= cols: col = 0; row += 1
-        text_color = self.palette['text_color']
-        self.status.setStyleSheet(f"color: {text_color};")
+
         self.status.showMessage(f"{len(buttons)} öğe yüklendi")
 
-    def _toggle_theme(self, checked):
+    # --------- Ayar Aksiyonları ---------
+    def _toggle_theme(self, checked: bool):
         self.theme = "dark" if checked else "light"
         self.settings.setValue("theme", self.theme)
         self.palette = DARK if self.theme == "dark" else LIGHT
         self._apply_theme()
 
-    def _toggle_topright(self, checked):
+    def _toggle_topright(self, checked: bool):
         self.start_top_right = checked
         self.settings.setValue("start_top_right", checked)
         if checked:
             self._move_to_selected_screen_top_right()
         self._update_menu_icons()
 
+    def _open_config(self):
+        if CONFIG_PATH.exists():
+            QtGui.QDesktopServices.openUrl(QtCore.QUrl.fromLocalFile(str(CONFIG_PATH)))
+        else:
+            QtWidgets.QMessageBox.information(self, "Bilgi", "actions.json bulunamadı.")
+
     def _reload_config(self):
-        self.cfg = load_config()
         self._rebuild_cards()
-        if self.enable_hotkeys:
-            try: keyboard.unhook_all_hotkeys()
-            except: pass
-            if not getattr(self, "hk_thread", None) or not self.hk_thread.is_alive():
-                self._start_hotkeys()
         QtWidgets.QMessageBox.information(self, "Yenilendi", "actions.json yeniden yüklendi.")
 
-    def _start_hotkeys(self):
-        self.hk_thread = threading.Thread(target=self._register_hotkeys, daemon=True)
-        self.hk_thread.start()
-
-    def _register_hotkeys(self):
-        try: keyboard.unhook_all_hotkeys()
-        except: pass
-        hk = self.cfg.get("hotkeys", {}); buttons = self.cfg.get("buttons", [])
-        for combo, idx in hk.items():
-            try:
-                idx = int(idx)
-                if 0 <= idx < len(buttons):
-                    keyboard.add_hotkey(combo, lambda a=buttons[idx]: run_action(a))
-            except: pass
-        try: keyboard.wait(suppress=False)
-        except: pass
-
-    def showEvent(self, e):
-        super().showEvent(e)
-        if self.start_top_right:
-            QtCore.QTimer.singleShot(0, self._move_to_selected_screen_top_right)
-
+# ---------------- Giriş ----------------
 def main():
     if hasattr(QtWidgets.QApplication, "setAttribute"):
         QtWidgets.QApplication.setAttribute(QtCore.Qt.AA_EnableHighDpiScaling, True)
@@ -325,9 +432,7 @@ def main():
 
     app = QtWidgets.QApplication(sys.argv)
     app.setOrganizationName(ORG); app.setApplicationName(APP_NAME)
-
-    # UYGULAMA GENEL İKONU
-    app.setWindowIcon(QtGui.QIcon("icons/app.ico"))   # .png de verebilirsin
+    app.setWindowIcon(QtGui.QIcon("icons/app.ico"))  # opsiyonel
 
     w = MainWindow()
     w.show()
