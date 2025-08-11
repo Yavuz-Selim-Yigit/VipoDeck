@@ -1,4 +1,3 @@
-# app.py — PyQt5 kısayol paneli (500x300, sağ üst, menü + reload, ikon-only, tema uyumlu yazı rengi)
 import sys, json, time, threading, subprocess, webbrowser
 from pathlib import Path
 from PyQt5 import QtCore, QtGui, QtWidgets
