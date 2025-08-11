@@ -98,47 +98,64 @@ class MainWindow(QtWidgets.QMainWindow):
     def _build_menubar(self):
         mb = self.menuBar()
 
-        # Tema butonu
+        # Tema (dinamik ikon + tooltip)
         self.act_dark = QtWidgets.QAction("", self, checkable=True)
         self.act_dark.setChecked(self.theme == "dark")
         self.act_dark.toggled.connect(self._toggle_theme)
-        self.act_dark.setToolTip("Tema Değiştir")
+        self.act_dark.setToolTip("Tema Değiştir")  # tooltip
         mb.addAction(self.act_dark)
 
-        # Sağ üst konum butonu
+        # Sağ üst konum (dinamik ikon + tooltip)
         self.act_topright = QtWidgets.QAction("", self, checkable=True)
         self.act_topright.setChecked(self.start_top_right)
         self.act_topright.toggled.connect(self._toggle_topright)
-        self.act_topright.setToolTip("Pencere Konumu")
+        self.act_topright.setToolTip("Pencere Konumu")  # tooltip
         mb.addAction(self.act_topright)
 
-        # Monitör menüsü
+        # Monitör menüsü (ikon + tooltip)
         self.m_monitors = mb.addMenu(QtGui.QIcon("icons/screen.png"), "")
-        self.m_monitors.setToolTip("Monitör Seç")
+        self.m_monitors.setToolTip("Monitör Seç")  # tooltip
         self.monitor_group = QtWidgets.QActionGroup(self)
         self.monitor_group.setExclusive(True)
 
-        # Config aç
+        # Config aç (ikon + tooltip)
         act_open_cfg = QtWidgets.QAction(QtGui.QIcon("icons/jsondocument.png"), "", self)
         act_open_cfg.triggered.connect(self._open_config)
-        act_open_cfg.setToolTip("Ayar Dosyasını Aç")
+        act_open_cfg.setToolTip("Ayar Dosyasını Aç")  # tooltip
         mb.addAction(act_open_cfg)
 
-        # Yenile
+        # Yenile (ikon + tooltip)
         act_reload = QtWidgets.QAction(QtGui.QIcon("icons/reload.png"), "", self)
         act_reload.triggered.connect(self._reload_config)
-        act_reload.setToolTip("Kısayolları Yeniden Yükle")
+        act_reload.setToolTip("Kısayolları Yeniden Yükle")  # tooltip
         mb.addAction(act_reload)
 
-        # Çıkış
+        # Çıkış (ikon + tooltip)
         act_quit = QtWidgets.QAction(QtGui.QIcon("icons/exit.png"), "", self)
         act_quit.triggered.connect(QtWidgets.qApp.quit)
-        act_quit.setToolTip("Uygulamadan Çık")
+        act_quit.setToolTip("Uygulamadan Çık")  # tooltip
         mb.addAction(act_quit)
 
         self.status = self.statusBar()
         self.status.showMessage("Hazır")
-        self._update_menu_icons()
+        self._update_menu_icons()  # başlangıç ikonları
+
+    def _update_menu_icons(self):
+        # Tema ikonu + açıklayıcı tooltip
+        if self.theme == "dark":
+            self.act_dark.setIcon(QtGui.QIcon("icons/dark-theme.png"))
+            self.act_dark.setToolTip("Koyu Tema (tıkla: Aydınlık)")
+        else:
+            self.act_dark.setIcon(QtGui.QIcon("icons/light-theme.png"))
+            self.act_dark.setToolTip("Aydınlık Tema (tıkla: Koyu)")
+
+        # Konum ikonu + açıklayıcı tooltip
+        if self.start_top_right:
+            self.act_topright.setIcon(QtGui.QIcon("icons/topright.png"))
+            self.act_topright.setToolTip("Sağ Üstte Açık (tıkla: Serbest)")
+        else:
+            self.act_topright.setIcon(QtGui.QIcon("icons/free.png"))
+            self.act_topright.setToolTip("Serbest Konum (tıkla: Sağ Üst)")
 
     def _update_menu_icons(self):
         # Tema ikonu
