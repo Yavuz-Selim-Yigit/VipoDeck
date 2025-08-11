@@ -59,52 +59,74 @@ class TitleBar(QtWidgets.QWidget):
         self.setFixedHeight(36)
         self.setSizePolicy(QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Fixed)
 
-        # Sol: ikon + başlık
+        # ----- SOL BLOK (ikon alanı) -----
+        self.leftWrap = QtWidgets.QWidget()
+        left = QtWidgets.QHBoxLayout(self.leftWrap)
+        left.setContentsMargins(8, 0, 0, 0)
+        left.setSpacing(8)
+
         self.icon = QtWidgets.QLabel()
         self.icon.setFixedSize(18, 18)
         if icon_path and Path(icon_path).exists():
-            self.icon.setPixmap(QtGui.QPixmap(icon_path).scaled(18, 18, QtCore.Qt.KeepAspectRatio, QtCore.Qt.SmoothTransformation))
+            self.icon.setPixmap(
+                QtGui.QPixmap(icon_path).scaled(
+                    18, 18, QtCore.Qt.KeepAspectRatio, QtCore.Qt.SmoothTransformation
+                )
+            )
+        left.addWidget(self.icon)
 
+        # Dengelemek için sol alanın min. genişliğini sağ butonlara göre ayarlayacağız
+        self.leftWrap.setMinimumWidth(0)
+
+        # ----- ORTA BAŞLIK -----
         self.title = QtWidgets.QLabel(title)
         self.title.setObjectName("windowTitleLabel")
+        self.title.setAlignment(QtCore.Qt.AlignCenter)
+        self.title.setSizePolicy(QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Preferred)
 
-        left = QtWidgets.QHBoxLayout()
-        left.setContentsMargins(8, 0, 0, 0)
-        left.setSpacing(8)
-        left.addWidget(self.icon)
-        left.addWidget(self.title)
-        leftWrap = QtWidgets.QWidget(); leftWrap.setLayout(left)
+        # ----- SAĞ BUTONLAR (minimize + close) -----
+        self.rightWrap = QtWidgets.QWidget()
+        btns = QtWidgets.QHBoxLayout(self.rightWrap)
+        btns.setContentsMargins(0, 0, 4, 0)
+        btns.setSpacing(6)
 
-        # Sağ: SADECE küçült ve kapat (özel ikonlar)
         self.btnMin = QtWidgets.QToolButton()
         self.btnMin.setToolTip("Küçült")
         self.btnMin.setIcon(QtGui.QIcon("icons/minimize.png"))
         self.btnMin.setIconSize(QtCore.QSize(16, 16))
+        self.btnMin.setFixedSize(30, 24)
         self.btnMin.clicked.connect(self.minimizeRequested)
 
         self.btnClose = QtWidgets.QToolButton()
         self.btnClose.setToolTip("Kapat")
         self.btnClose.setIcon(QtGui.QIcon("icons/exit.png"))
         self.btnClose.setIconSize(QtCore.QSize(16, 16))
+        self.btnClose.setFixedSize(30, 24)
         self.btnClose.clicked.connect(self.closeRequested)
 
-        btns = QtWidgets.QHBoxLayout()
-        btns.setContentsMargins(0, 0, 4, 0)
-        btns.setSpacing(2)
-        for b in (self.btnMin, self.btnClose):
-            b.setFixedSize(30, 24)
-            btns.addWidget(b)
-        rightWrap = QtWidgets.QWidget(); rightWrap.setLayout(btns)
+        btns.addWidget(self.btnMin)
+        btns.addWidget(self.btnClose)
 
-        # Ana düzen
+        # ----- ANA YERLEŞİM: sol – ORTA – sağ -----
         h = QtWidgets.QHBoxLayout(self)
         h.setContentsMargins(0, 0, 0, 0)
         h.setSpacing(0)
-        h.addWidget(leftWrap)
-        h.addStretch(1)  # sürükleme alanı
-        h.addWidget(rightWrap)
+        h.addWidget(self.leftWrap)
+        h.addWidget(self.title, 1)  # stretch=1 -> orta alan
+        h.addWidget(self.rightWrap)
 
         self.applyStyle(dark=False)
+
+        # İlk dengeleme
+        QtCore.QTimer.singleShot(0, self._balanceSides)
+
+    def _balanceSides(self):
+        """Sağdaki butonların genişliği kadar sol bloğun minimum genişliğini ayarla ki başlık gerçek merkezde kalsın."""
+        self.leftWrap.setMinimumWidth(self.rightWrap.sizeHint().width())
+
+    def resizeEvent(self, e):
+        super().resizeEvent(e)
+        self._balanceSides()
 
     def applyStyle(self, dark: bool):
         if dark:
@@ -118,7 +140,7 @@ class TitleBar(QtWidgets.QWidget):
             QToolButton:hover {{ background:{hover}; border-radius:6px; }}
         """)
 
-    # Sürükleme
+    # Sürükleme (değişmedi)
     def mousePressEvent(self, e: QtGui.QMouseEvent):
         if e.button() == QtCore.Qt.LeftButton:
             self._drag = True
@@ -140,7 +162,6 @@ class TitleBar(QtWidgets.QWidget):
 
     def mouseDoubleClickEvent(self, e: QtGui.QMouseEvent):
         e.ignore()
-
 
 # ---------------- Kart Buton ----------------
 class CardButton(QtWidgets.QPushButton):
@@ -184,7 +205,7 @@ class MainWindow(QtWidgets.QMainWindow):
     def __init__(self):
         super().__init__()
         self.setWindowTitle(APP_NAME)
-        self.setFixedSize(500, 325)
+        self.setFixedSize(500, 325)  # status bar için biraz yüksek
 
         # Başlık çubuğunu kaldır (frameless)
         self.setWindowFlags(self.windowFlags() | QtCore.Qt.FramelessWindowHint)
@@ -202,14 +223,13 @@ class MainWindow(QtWidgets.QMainWindow):
         self.palette = DARK if self.theme == "dark" else LIGHT
         self.enable_hotkeys = False
 
-        # Özel üst bar + menü bar’ı birlikte yerleştir
+        # Üst bar + menü bar
         self.titleBar = TitleBar(APP_NAME, icon_path="icons/app.ico")
         self.titleBar.setToolTip("Pencereyi sürüklemek için tutun")
         self.titleBar.minimizeRequested.connect(self.showMinimized)
         self.titleBar.closeRequested.connect(self.close)
 
-
-        self.menubar = QtWidgets.QMenuBar()  # self.menuBar() yerine manuel menü
+        self.menubar = QtWidgets.QMenuBar()
         self._build_menubar(self.menubar)
 
         top_container = QtWidgets.QWidget()
@@ -221,6 +241,7 @@ class MainWindow(QtWidgets.QMainWindow):
         self.setMenuWidget(top_container)
 
         self._build_ui()
+        self._build_statusbar()          # ⬅ status bar oluştur
         self._apply_theme()
 
         self.cfg = load_config()
@@ -233,13 +254,16 @@ class MainWindow(QtWidgets.QMainWindow):
         if self.start_top_right:
             QtCore.QTimer.singleShot(0, self._move_to_selected_screen_top_right)
 
-    def _toggle_max_restore(self):
-        if self.isMaximized():
-            self.showNormal()
-            self.titleBar.setMaximizedState(False)
-        else:
-            self.showMaximized()
-            self.titleBar.setMaximizedState(True)
+    # --------- StatusBar ---------
+    def _build_statusbar(self):
+        self.status = self.statusBar()
+        self.status.setSizeGripEnabled(False)
+        self._update_statusbar_text()
+
+    def _update_statusbar_text(self):
+        text_color = self.palette['text_color']
+        self.status.setStyleSheet(f"color: {text_color}; font-size:12px;")
+        self.status.showMessage("ViperaDev | v1.0.0")
 
     # --------- MENÜ ---------
     def _build_menubar(self, mb: QtWidgets.QMenuBar):
@@ -375,8 +399,8 @@ class MainWindow(QtWidgets.QMainWindow):
             if isinstance(w, CardButton):
                 w.p = self.palette
                 w.apply_style()
-        # statusbar rengi
-        self.status.setStyleSheet(f"color:{p['text_color']};")
+        # statusbar rengi + yazısı
+        self._update_statusbar_text()
         self._update_menu_icons()
 
     # --------- Grid ---------
