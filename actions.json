@@ -5,19 +5,16 @@
     {"label": "YouTube Music", "type": "open", "target": "https://music.youtube.com", "icon": "icons/ytmusic.png"},
     {"label": "Gmail", "type": "open", "target": "https://mail.google.com", "icon": "icons/gmail.png"},
     {"label": "Google Drive", "type": "open", "target": "https://drive.google.com", "icon": "icons/drive.png"},
+    {"label": "Google", "type": "open", "target": "https://google.com", "icon": "icons/google.png"},
     {"label": "Canva", "type": "open", "target": "https://canva.com", "icon": "icons/canva.png"},
     {"label": "Figma", "type": "open", "target": "https://figma.com", "icon": "icons/figma.png"},
     {"label": "WhatsApp Web", "type": "open", "target": "https://web.whatsapp.com", "icon": "icons/whatsapp.png"},
+    {"label": "GitHub Web", "type": "open", "target": "https://github.com", "icon": "icons/githubweb.png"},
     {"label": "Unity", "type": "open", "target": "C:/Program Files/Unity/Hub/UnityHub.exe", "icon": "icons/unity.png"},
     {"label": "Unreal Engine", "type": "open", "target": "C:/Program Files/Epic Games/UE_5.0/Engine/Binaries/Win64/UnrealEditor.exe", "icon": "icons/unreal.png"},
     {"label": "GitHub Desktop", "type": "open", "target": "C:/Users/USERNAME/AppData/Local/GitHubDesktop/GitHubDesktop.exe", "icon": "icons/github.png"},
     {"label": "VS Code", "type": "open", "target": "C:/Users/USERNAME/AppData/Local/Programs/Microsoft VS Code/Code.exe", "icon": "icons/vscode.png"},
-    {"label": "Blender", "type": "open", "target": "C:/Program Files/Blender Foundation/Blender/blender.exe", "icon": "icons/blender.png"},
-    {"label": "Kopyala", "type": "keys", "keys": ["ctrl", "c"], "icon": "icons/copy.png"},
-    {"label": "Yapıştır", "type": "keys", "keys": ["ctrl", "v"], "icon": "icons/paste.png"},
-    {"label": "Pano Geçmişi", "type": "keys", "keys": ["win", "v"], "icon": "icons/clipboard.png"},
-    {"label": "Ekran Görüntüsü", "type": "keys", "keys": ["win", "shift", "s"], "icon": "icons/screenshot.png"},
-    {"label": "Masaüstünü Göster", "type": "keys", "keys": ["win", "d"], "icon": "icons/desktop.png"}
+    {"label": "Blender", "type": "open", "target": "C:/Program Files/Blender Foundation/Blender/blender.exe", "icon": "icons/blender.png"}
   ],
   "hotkeys": {
     "ctrl+alt+1": 0,
