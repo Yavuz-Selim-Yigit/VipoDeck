@@ -1,0 +1,40 @@
+{
+  "buttons": [
+    
+    {"label": "GPT (ChatGPT)", "type": "open", "target": "https://chat.openai.com"},
+    {"label": "YouTube", "type": "open", "target": "https://www.youtube.com"},
+    {"label": "YouTube Music", "type": "open", "target": "https://music.youtube.com"},
+    {"label": "Gmail", "type": "open", "target": "https://mail.google.com"},
+    {"label": "Google Drive", "type": "open", "target": "https://drive.google.com"},
+    {"label": "Canva", "type": "open", "target": "https://www.canva.com"},
+    {"label": "Figma (Web)", "type": "open", "target": "https://www.figma.com"},
+    {"label": "WhatsApp Web", "type": "open", "target": "https://web.whatsapp.com"},
+
+
+    {"label": "Unity Hub", "type": "open", "target": "C:\\Program Files\\Unity Hub\\Unity Hub.exe"},
+    {"label": "Unreal Engine (Launcher)", "type": "open", "target": "C:\\Program Files\\Epic Games\\Launcher\\Portal\\Binaries\\Win64\\EpicGamesLauncher.exe"},
+    {"label": "GitHub Desktop", "type": "open", "target": "C:\\Users\\Selim\\AppData\\Local\\GitHubDesktop\\GitHubDesktop.exe"},
+    {"label": "VS Code", "type": "open", "target": "C:\\Users\\Selim\\AppData\\Local\\Programs\\Microsoft VS Code\\Code.exe"},
+    {"label": "Blender", "type": "open", "target": "C:\\Program Files\\Blender Foundation\\Blender 4.1\\blender.exe"},
+
+
+    {"label": "Ctrl+C", "type": "keys", "keys": ["ctrl", "c"]},
+    {"label": "Ctrl+V", "type": "keys", "keys": ["ctrl", "v"]},
+    {"label": "Win+V (Pano)", "type": "keys", "keys": ["win", "v"]},
+    {"label": "Ekran Görüntüsü", "type": "keys", "keys": ["win", "shift", "s"]},
+    {"label": "Masaüstünü Göster", "type": "keys", "keys": ["win", "d"]}
+  ],
+
+  "hotkeys": {
+    "alt+1": 0,  
+    "alt+2": 1,   
+    "alt+3": 3,   
+    "alt+4": 9,  
+    "alt+5": 11,  
+    "alt+6": 14,  
+    "alt+7": 15,  
+    "alt+8": 16,  
+    "alt+9": 17,  
+    "alt+0": 18   
+  }
+}
