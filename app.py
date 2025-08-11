@@ -1,4 +1,4 @@
-# modern_app.py — PyQt5 ile modern, şık kısayol paneli
+# modern_app.py — PyQt5 ile modern, şık kısayol paneli (500x300 pencere boyutu)
 # Kurulum: pip install pyqt5 keyboard pyautogui
 
 import sys, json, time, threading, subprocess, webbrowser
@@ -11,7 +11,6 @@ CONFIG_PATH = Path(__file__).with_name("actions.json")
 ORG = "ViperaDev"
 APP = "ShortcutPanel"
 
-# Tema renkleri (modern pastel tonlar + hafif gölgeler)
 LIGHT = {
     "bg": "#f5f7fa", "fg": "#1e293b", "muted": "#64748b",
     "card_bg": "#ffffff", "card_border": "#e2e8f0", "card_hover": "#f1f5f9",
@@ -60,10 +59,9 @@ class CardButton(QtWidgets.QPushButton):
         self.data = data
         self.p = palette
         self.setCursor(QtCore.Qt.PointingHandCursor)
-        self.setFixedSize(300, 120)
-        self.setIconSize(QtCore.QSize(28, 28))
+        self.setMinimumHeight(60)
+        self.setIconSize(QtCore.QSize(20, 20))
         self.setStyleSheet(self._style())
-
         title = data.get("label", "—")
         sub = self._subtitle(data)
         self.setText(f"{title}\n{sub}")
@@ -86,11 +84,11 @@ class CardButton(QtWidgets.QPushButton):
         QPushButton {{
             background:{p['card_bg']};
             border:1px solid {p['card_border']};
-            border-radius:18px;
-            padding:14px;
+            border-radius:10px;
+            padding:8px;
             text-align:left;
             color:{p['fg']};
-            font-size:15px;
+            font-size:13px;
         }}
         QPushButton:hover {{
             background:{p['card_hover']};
@@ -102,7 +100,7 @@ class MainWindow(QtWidgets.QMainWindow):
         super().__init__()
         self.setWindowTitle(APP_NAME)
         self.setWindowIcon(self.style().standardIcon(QtWidgets.QStyle.SP_DesktopIcon))
-        self.resize(500, 300)
+        self.setFixedSize(800, 300)
 
         self.settings = QtCore.QSettings(ORG, APP)
         self.theme = self.settings.value("theme", "light")
@@ -114,35 +112,10 @@ class MainWindow(QtWidgets.QMainWindow):
         self._start_hotkeys()
 
     def _build_ui(self):
-        top = QtWidgets.QToolBar()
-        top.setMovable(False)
-        self.addToolBar(QtCore.Qt.TopToolBarArea, top)
-
-        title = QtWidgets.QLabel("🚀 Kısayol Paneli")
-        title.setStyleSheet("font-size:18px;font-weight:700;margin-right:8px;")
-        top.addWidget(title)
-
-        top.addSeparator()
-        self.search = QtWidgets.QLineEdit()
-        self.search.setPlaceholderText("Ara: Gmail, VS Code, Win+V…")
-        self.search.textChanged.connect(self._rebuild_cards)
-        self.search.setFixedWidth(360)
-        top.addWidget(self.search)
-
-        top.addSeparator()
-        self.theme_btn = QtWidgets.QPushButton("🌙" if self.theme == "light" else "☀️")
-        self.theme_btn.clicked.connect(self._toggle_theme)
-        top.addWidget(self.theme_btn)
-
-        top.addSeparator()
-        reload_btn = QtWidgets.QPushButton("Yenile")
-        reload_btn.clicked.connect(self._reload_config)
-        top.addWidget(reload_btn)
-
         central = QtWidgets.QWidget()
         self.setCentralWidget(central)
         v = QtWidgets.QVBoxLayout(central)
-        v.setContentsMargins(16, 12, 16, 12)
+        v.setContentsMargins(8, 8, 8, 8)
 
         self.scroll = QtWidgets.QScrollArea()
         self.scroll.setWidgetResizable(True)
@@ -153,22 +126,17 @@ class MainWindow(QtWidgets.QMainWindow):
         self.canvas.setStyleSheet("background:transparent;")
         self.grid = QtWidgets.QGridLayout(self.canvas)
         self.grid.setContentsMargins(0,0,0,0)
-        self.grid.setHorizontalSpacing(14)
-        self.grid.setVerticalSpacing(14)
+        self.grid.setHorizontalSpacing(8)
+        self.grid.setVerticalSpacing(8)
 
         self.scroll.setWidget(self.canvas)
         v.addWidget(self.scroll)
-
-        self.status = QtWidgets.QStatusBar()
-        self.setStatusBar(self.status)
 
     def _apply_theme(self):
         p = self.palette
         base_qss = GLOBAL_QSS + f"""
         QMainWindow {{ background:{p['bg']}; }}
-        QToolBar {{ background:transparent; border:none; padding:6px; }}
-        QLineEdit {{ background:{p['input_bg']}; color:{p['fg']}; border:1px solid {p['input_border']}; border-radius:12px; padding:8px; }}
-        QStatusBar {{ background:transparent; color:{p['muted']}; }}
+        QLineEdit {{ background:{p['input_bg']}; color:{p['fg']}; border:1px solid {p['input_border']}; border-radius:8px; padding:4px; }}
         """
         self.setStyleSheet(base_qss)
 
@@ -185,9 +153,8 @@ class MainWindow(QtWidgets.QMainWindow):
 
     def _rebuild_cards(self):
         self._clear_grid()
-        q = (self.search.text() or "").strip().lower()
-        items = [b for b in self.cfg.get("buttons", []) if q in b.get("label", "").lower()]
-        cols = max(1, self.width() // 520)
+        items = self.cfg.get("buttons", [])
+        cols = max(1, self.width() // 160)
         row = col = 0
         for b in items:
             card = CardButton(b, self.palette)
@@ -195,7 +162,6 @@ class MainWindow(QtWidgets.QMainWindow):
             col += 1
             if col >= cols:
                 col = 0; row += 1
-        self.status.showMessage(f"{len(items)} öğe • Tema: {'Koyu' if self.palette is DARK else 'Açık'}")
 
     def _toggle_theme(self):
         self.theme = "dark" if self.theme == "light" else "light"
@@ -203,7 +169,6 @@ class MainWindow(QtWidgets.QMainWindow):
         self.palette = DARK if self.theme == "dark" else LIGHT
         self._apply_theme()
         self._rebuild_cards()
-        self.theme_btn.setText("🌙" if self.theme == "light" else "☀️")
 
     def _start_hotkeys(self):
         self.hk_thread = threading.Thread(target=self._register_hotkeys, daemon=True)
@@ -224,14 +189,6 @@ class MainWindow(QtWidgets.QMainWindow):
         try: keyboard.wait(suppress=False)
         except Exception: pass
 
-    def _reload_config(self):
-        self._load_and_build()
-        try: keyboard.unhook_all_hotkeys()
-        except Exception: pass
-        if not getattr(self, "hk_thread", None) or not self.hk_thread.is_alive():
-            self._start_hotkeys()
-        QtWidgets.QMessageBox.information(self, "Yenilendi", "actions.json yeniden yüklendi.")
-
 def main():
     if hasattr(QtWidgets.QApplication, "setAttribute"):
         QtWidgets.QApplication.setAttribute(QtCore.Qt.AA_EnableHighDpiScaling, True)
@@ -243,12 +200,6 @@ def main():
 
     w = MainWindow()
     w.show()
-
-    try:
-        keyboard.add_hotkey("ctrl+shift+0", lambda: None)
-        keyboard.remove_hotkey("ctrl+shift+0")
-    except Exception:
-        QtWidgets.QMessageBox.information(w, "Bilgi", "Global kısayollar için yönetici izni gerekebilir.\nUygulamayı 'Yönetici olarak çalıştır' ile başlatmayı deneyebilirsin.")
 
     sys.exit(app.exec_())
 
