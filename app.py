@@ -60,7 +60,7 @@ class CardButton(QtWidgets.QPushButton):
         self.data = data
         self.p = palette
         self.setCursor(QtCore.Qt.PointingHandCursor)
-        self.setMinimumHeight(90)
+        self.setFixedSize(500, 320)
         self.setIconSize(QtCore.QSize(28, 28))
         self.setStyleSheet(self._style())
 
@@ -187,7 +187,7 @@ class MainWindow(QtWidgets.QMainWindow):
         self._clear_grid()
         q = (self.search.text() or "").strip().lower()
         items = [b for b in self.cfg.get("buttons", []) if q in b.get("label", "").lower()]
-        cols = max(3, self.width() // 240)
+        cols = max(1, self.width() // 520)
         row = col = 0
         for b in items:
             card = CardButton(b, self.palette)
