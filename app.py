@@ -1,4 +1,4 @@
-# modern_app.py — PyQt5 ile modern, şık kısayol paneli (500x300 pencere boyutu, sağ üstte açılır)
+# modern_app.py — PyQt5 ile modern, şık kısayol paneli (500x300 pencere boyutu, sağ üstte açılır, ikonlu butonlar)
 # Kurulum: pip install pyqt5 keyboard pyautogui
 
 import sys, json, time, threading, subprocess, webbrowser
@@ -59,24 +59,17 @@ class CardButton(QtWidgets.QPushButton):
         self.data = data
         self.p = palette
         self.setCursor(QtCore.Qt.PointingHandCursor)
-        self.setMinimumHeight(30)
-        self.setIconSize(QtCore.QSize(10, 10))
+        self.setMinimumHeight(60)
+        self.setIconSize(QtCore.QSize(48, 48))
         self.setStyleSheet(self._style())
-        title = data.get("label", "—")
-        sub = self._subtitle(data)
-        self.setText(f"{title}\n{sub}")
-        self.clicked.connect(lambda: run_action(self.data))
 
-    def _subtitle(self, d):
-        t = (d.get("type") or "").lower()
-        if t == "open":
-            tgt = d.get("target", "")
-            if tgt.startswith("http"):
-                return QtCore.QUrl(tgt).host() or tgt
-            return Path(tgt).name
-        if t == "keys":
-            return "+".join(k.upper() for k in d.get("keys", []))
-        return ""
+        icon_path = data.get("icon")
+        if icon_path and Path(icon_path).exists():
+            self.setIcon(QtGui.QIcon(icon_path))
+        else:
+            self.setText(data.get("label", "?"))
+
+        self.clicked.connect(lambda: run_action(self.data))
 
     def _style(self):
         p = self.p
@@ -86,9 +79,7 @@ class CardButton(QtWidgets.QPushButton):
             border:1px solid {p['card_border']};
             border-radius:10px;
             padding:8px;
-            text-align:left;
-            color:{p['fg']};
-            font-size:13px;
+            text-align:center;
         }}
         QPushButton:hover {{
             background:{p['card_hover']};
@@ -100,9 +91,8 @@ class MainWindow(QtWidgets.QMainWindow):
         super().__init__()
         self.setWindowTitle(APP_NAME)
         self.setWindowIcon(self.style().standardIcon(QtWidgets.QStyle.SP_DesktopIcon))
-        self.setFixedSize(600, 300)
+        self.setFixedSize(500, 300)
 
-        # Pencereyi sağ üst köşeye konumlandır
         screen_geo = QtWidgets.QApplication.primaryScreen().availableGeometry()
         x = screen_geo.width() - self.width()
         y = 0
@@ -160,7 +150,7 @@ class MainWindow(QtWidgets.QMainWindow):
     def _rebuild_cards(self):
         self._clear_grid()
         items = self.cfg.get("buttons", [])
-        cols = max(1, self.width() // 160)
+        cols = max(1, self.width() // 100)
         row = col = 0
         for b in items:
             card = CardButton(b, self.palette)
