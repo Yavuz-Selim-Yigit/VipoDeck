@@ -75,15 +75,17 @@ class TitleBar(QtWidgets.QWidget):
         left.addWidget(self.title)
         leftWrap = QtWidgets.QWidget(); leftWrap.setLayout(left)
 
-        # Sağ: SADECE küçült ve kapat
+        # Sağ: SADECE küçült ve kapat (özel ikonlar)
         self.btnMin = QtWidgets.QToolButton()
         self.btnMin.setToolTip("Küçült")
-        self.btnMin.setIcon(self.style().standardIcon(QtWidgets.QStyle.SP_TitleBarMinButton))
+        self.btnMin.setIcon(QtGui.QIcon("icons/minimize.png"))
+        self.btnMin.setIconSize(QtCore.QSize(16, 16))
         self.btnMin.clicked.connect(self.minimizeRequested)
 
         self.btnClose = QtWidgets.QToolButton()
         self.btnClose.setToolTip("Kapat")
-        self.btnClose.setIcon(self.style().standardIcon(QtWidgets.QStyle.SP_TitleBarCloseButton))
+        self.btnClose.setIcon(QtGui.QIcon("icons/exit.png"))
+        self.btnClose.setIconSize(QtCore.QSize(16, 16))
         self.btnClose.clicked.connect(self.closeRequested)
 
         btns = QtWidgets.QHBoxLayout()
@@ -136,7 +138,6 @@ class TitleBar(QtWidgets.QWidget):
         self._drag = False
         super().mouseReleaseEvent(e)
 
-    # Çift tıkta artık hiçbir şey yapma (büyüt/geri al yok)
     def mouseDoubleClickEvent(self, e: QtGui.QMouseEvent):
         e.ignore()
 
