@@ -1,4 +1,4 @@
-# app.py — PyQt5 kısayol paneli (500x300, sağ üst, menü + reload, ikon-only)
+# app.py — PyQt5 kısayol paneli (500x300, sağ üst, menü + reload, ikon-only, tema uyumlu yazı rengi)
 import sys, json, time, threading, subprocess, webbrowser
 from pathlib import Path
 from PyQt5 import QtCore, QtGui, QtWidgets
@@ -13,12 +13,12 @@ CONFIG_PATH = Path(__file__).with_name("actions.json")
 LIGHT = {
     "bg": "#f5f7fa", "fg": "#1e293b", "muted": "#64748b",
     "card_bg": "#ffffff", "card_border": "#e2e8f0", "card_hover": "#f1f5f9",
-    "menu_bg": "#ffffff", "menu_border": "#e2e8f0"
+    "menu_bg": "#ffffff", "menu_border": "#e2e8f0", "text_color": "#000000"
 }
 DARK = {
     "bg": "#0f172a", "fg": "#e2e8f0", "muted": "#94a3b8",
     "card_bg": "#1e293b", "card_border": "#334155", "card_hover": "#273449",
-    "menu_bg": "#111827", "menu_border": "#334155"
+    "menu_bg": "#111827", "menu_border": "#334155", "text_color": "#ffffff"
 }
 
 GLOBAL_QSS = """
@@ -39,11 +39,9 @@ def load_config():
 def open_target(target: str):
     if not target:
         return
-    # URL ise
     if target.startswith(("http://", "https://")):
         webbrowser.open(target)
         return
-    # Windows mağaza kısayolu / shell:AppsFolder hedefi dahil
     try:
         subprocess.Popen([target], shell=True)
     except Exception:
@@ -81,7 +79,6 @@ class CardButton(QtWidgets.QPushButton):
             self.setIcon(QtGui.QIcon(icon_path))
             self.setText("")  # ikon-only
         else:
-            # İkon yoksa kısa label göster
             self.setText(data.get("label", "?"))
 
         self.clicked.connect(lambda: run_action(self.data))
@@ -95,7 +92,7 @@ class CardButton(QtWidgets.QPushButton):
             border-radius:10px;
             padding:10px;
             text-align:center;
-            color:{p['fg']};
+            color:{p['text_color']};
             font-size:13px;
         }}
         QPushButton:hover {{ background:{p['card_hover']}; }}
@@ -114,12 +111,11 @@ class MainWindow(QtWidgets.QMainWindow):
         self.start_top_right = self.settings.value("start_top_right", True, type=bool)
         self.palette = DARK if self.theme == "dark" else LIGHT
 
-        # Açılışta sağ üst
         if self.start_top_right:
             scr = QtWidgets.QApplication.primaryScreen().availableGeometry()
             self.move(scr.right() - self.width(), scr.top())
 
-        self.enable_hotkeys = False  # global kısayolları açmak için True yap
+        self.enable_hotkeys = False
 
         self._build_menu()
         self._build_ui()
@@ -153,7 +149,7 @@ class MainWindow(QtWidgets.QMainWindow):
         m_settings.addAction(act_open_cfg)
 
         act_reload = QtWidgets.QAction("Yapılandırmayı Yenile", self)
-        act_reload.triggered.connect(self._reload_config)  # <-- HATAYI ÇÖZEN METOT
+        act_reload.triggered.connect(self._reload_config)
         m_settings.addAction(act_reload)
 
         m_settings.addSeparator()
@@ -196,7 +192,7 @@ class MainWindow(QtWidgets.QMainWindow):
         QMainWindow {{ background:{p['bg']}; }}
         QMenuBar {{ background:transparent; color:{p['fg']}; }}
         QMenuBar::item {{ padding:6px 10px; }}
-        QMenu {{ background:{p['menu_bg']}; border:1px solid {p['menu_border']}; }}
+        QMenu {{ background:{p['menu_bg']}; border:1px solid {p['menu_border']}; color:{p['text_color']}; }}
         QMenu::item:selected {{ background:{p['card_hover']}; }}
         QStatusBar {{ background:transparent; color:{p['muted']}; }}
         """
@@ -219,11 +215,9 @@ class MainWindow(QtWidgets.QMainWindow):
     def _rebuild_cards(self):
         self._clear_grid()
         buttons = self.cfg.get("buttons", [])
-
-        # 500x300'e uygun kolon hesabı (buton 72px + 8px boşluk)
         btn_w = 72
         gap = 8
-        inner_w = self.width() - 16  # kenar boşlukları ~8+8
+        inner_w = self.width() - 16
         cols = max(3, min(6, (inner_w + gap) // (btn_w + gap)))
 
         row = col = 0
@@ -249,11 +243,9 @@ class MainWindow(QtWidgets.QMainWindow):
         self.start_top_right = checked
         self.settings.setValue("start_top_right", checked)
 
-    # --- Yapılandırmayı yenile (HATAYI ÇÖZEN METOT) ---
     def _reload_config(self):
         self.cfg = load_config()
         self._rebuild_cards()
-        # Global hotkeys açıksa yeniden kur
         if self.enable_hotkeys:
             try:
                 keyboard.unhook_all_hotkeys()
@@ -263,7 +255,7 @@ class MainWindow(QtWidgets.QMainWindow):
                 self._start_hotkeys()
         QtWidgets.QMessageBox.information(self, "Yenilendi", "actions.json yeniden yüklendi.")
 
-    # --- Global Hotkeys (opsiyonel) ---
+    # --- Global Hotkeys ---
     def _start_hotkeys(self):
         self.hk_thread = threading.Thread(target=self._register_hotkeys, daemon=True)
         self.hk_thread.start()
