@@ -5,9 +5,22 @@ from PyQt5 import QtCore, QtGui, QtWidgets
 import pyautogui, keyboard
 
 APP_NAME = "Kısayol Paneli"
+APP_ID   = "ViperaDev.KisayolPaneli"   # Windows görev çubuğu için (opsiyonel ama tavsiye)
 ORG = "ViperaDev"
 APP = "ShortcutPanel"
 CONFIG_PATH = Path(__file__).with_name("actions.json")
+
+
+
+# (Windows'ta görev çubuğu doğru ikonu göstersin diye AppUserModelID verelim)
+try:
+    import ctypes, sys
+    if sys.platform.startswith("win"):
+        ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID(APP_ID)
+except Exception:
+    pass
+
+
 
 LIGHT = {"bg": "#f5f7fa", "fg": "#1e293b", "muted": "#64748b", "card_bg": "#ffffff", "card_border": "#e2e8f0", "card_hover": "#f1f5f9", "menu_bg": "#ffffff", "menu_border": "#e2e8f0", "text_color": "#000000"}
 DARK = {"bg": "#0f172a", "fg": "#e2e8f0", "muted": "#94a3b8", "card_bg": "#1e293b", "card_border": "#334155", "card_hover": "#273449", "menu_bg": "#111827", "menu_border": "#334155", "text_color": "#ffffff"}
@@ -77,6 +90,7 @@ class MainWindow(QtWidgets.QMainWindow):
     def __init__(self):
         super().__init__()
         self.setWindowTitle(APP_NAME)
+        self.setWindowIcon(QtGui.QIcon("icons/app.ico"))   # PENCERE İKONU
         self.setFixedSize(500, 300)
         self.settings = QtCore.QSettings(ORG, APP)
         self.theme = self.settings.value("theme", "light")
@@ -307,9 +321,15 @@ def main():
     if hasattr(QtWidgets.QApplication, "setAttribute"):
         QtWidgets.QApplication.setAttribute(QtCore.Qt.AA_EnableHighDpiScaling, True)
         QtWidgets.QApplication.setAttribute(QtCore.Qt.AA_UseHighDpiPixmaps, True)
+
     app = QtWidgets.QApplication(sys.argv)
     app.setOrganizationName(ORG); app.setApplicationName(APP_NAME)
-    w = MainWindow(); w.show()
+
+    # UYGULAMA GENEL İKONU
+    app.setWindowIcon(QtGui.QIcon("icons/app.ico"))   # .png de verebilirsin
+
+    w = MainWindow()
+    w.show()
     sys.exit(app.exec_())
 
 if __name__ == "__main__":
