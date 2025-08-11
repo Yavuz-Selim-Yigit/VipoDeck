@@ -1,4 +1,4 @@
-# modern_app.py — PyQt5 ile modern, şık kısayol paneli (500x300 pencere boyutu)
+# modern_app.py — PyQt5 ile modern, şık kısayol paneli (500x300 pencere boyutu, sağ üstte açılır)
 # Kurulum: pip install pyqt5 keyboard pyautogui
 
 import sys, json, time, threading, subprocess, webbrowser
@@ -59,8 +59,8 @@ class CardButton(QtWidgets.QPushButton):
         self.data = data
         self.p = palette
         self.setCursor(QtCore.Qt.PointingHandCursor)
-        self.setMinimumHeight(60)
-        self.setIconSize(QtCore.QSize(20, 20))
+        self.setMinimumHeight(30)
+        self.setIconSize(QtCore.QSize(10, 10))
         self.setStyleSheet(self._style())
         title = data.get("label", "—")
         sub = self._subtitle(data)
@@ -100,7 +100,13 @@ class MainWindow(QtWidgets.QMainWindow):
         super().__init__()
         self.setWindowTitle(APP_NAME)
         self.setWindowIcon(self.style().standardIcon(QtWidgets.QStyle.SP_DesktopIcon))
-        self.setFixedSize(800, 300)
+        self.setFixedSize(600, 300)
+
+        # Pencereyi sağ üst köşeye konumlandır
+        screen_geo = QtWidgets.QApplication.primaryScreen().availableGeometry()
+        x = screen_geo.width() - self.width()
+        y = 0
+        self.move(x, y)
 
         self.settings = QtCore.QSettings(ORG, APP)
         self.theme = self.settings.value("theme", "light")
