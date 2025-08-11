@@ -60,7 +60,7 @@ class CardButton(QtWidgets.QPushButton):
         self.data = data
         self.p = palette
         self.setCursor(QtCore.Qt.PointingHandCursor)
-        self.setFixedSize(500, 320)
+        self.setFixedSize(300, 120)
         self.setIconSize(QtCore.QSize(28, 28))
         self.setStyleSheet(self._style())
 
@@ -102,7 +102,7 @@ class MainWindow(QtWidgets.QMainWindow):
         super().__init__()
         self.setWindowTitle(APP_NAME)
         self.setWindowIcon(self.style().standardIcon(QtWidgets.QStyle.SP_DesktopIcon))
-        self.resize(1000, 640)
+        self.resize(500, 300)
 
         self.settings = QtCore.QSettings(ORG, APP)
         self.theme = self.settings.value("theme", "light")
