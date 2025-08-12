@@ -30,16 +30,12 @@ git clone https://github.com/Yavuz-Selim-Yigit/VipoDeck.git
 cd VipoDeck
 ```
 
-### 2) Sanal Ortam ve Bağımlılıklar
+### 2) Bağımlılıklar
 
 ```bash
-python -m venv .venv
-# Windows
-.venv\Scripts\activate
-# Mac / Linux
-source .venv/bin/activate
 
 pip install -r requirements.txt
+
 ```
 
 `requirements.txt` içeriği:
@@ -90,32 +86,6 @@ Uygulamada görünen kartlar bu dosyadan yüklenir. Örnek şema:
 }
 ```
 
----
-
-## 📂 Proje Yapısı
-
-```
-VipoDeck/
-├─ app.py                 
-├─ actions.json           
-├─ requirements.txt       
-├─ icons/                 
-│  ├─ app.ico
-│  ├─ dark-theme.png
-│  ├─ light-theme.png
-│  ├─ topright.png
-│  ├─ free.png
-│  ├─ screen.png
-│  ├─ jsondocument.png
-│  ├─ reload.png
-│  ├─ minimize.png
-│  └─ exit.png
-└─ docs/                  
-   ├─ screenshot_light.png
-   └─ screenshot_dark.png
-```
-
----
 
 ## 👤 Geliştirici
 
