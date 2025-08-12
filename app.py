@@ -234,7 +234,7 @@ class MainWindow(QtWidgets.QMainWindow):
     def __init__(self):
         super().__init__()
         self.setWindowTitle(APP_NAME)
-        self.setFixedSize(720, 380)  # biraz genişlettik (sol panel için)
+        self.setFixedSize(700, 380)  # biraz genişlettik (sol panel için)
         self.setWindowFlags(self.windowFlags() | QtCore.Qt.FramelessWindowHint)
 
         # Ayarlar
@@ -419,20 +419,20 @@ class MainWindow(QtWidgets.QMainWindow):
 
         # === SOL: PROFİL PANELİ ===
         self.leftPanel = QtWidgets.QFrame()
-        self.leftPanel.setFixedWidth(220)
+        self.leftPanel.setFixedWidth(150)
         self.leftPanel.setFrameShape(QtWidgets.QFrame.NoFrame)
         lp = QtWidgets.QHBoxLayout(self.leftPanel); lp.setContentsMargins(0,0,0,0); lp.setSpacing(8)
 
         # 1) Dikey ikon araç çubuğu (EN SOLA)
         self.profileToolbar = QtWidgets.QFrame()
-        self.profileToolbar.setFixedWidth(48)
+        self.profileToolbar.setFixedWidth(32)
         vtb = QtWidgets.QVBoxLayout(self.profileToolbar)
         vtb.setContentsMargins(4,4,4,4); vtb.setSpacing(8)
 
         def tool(icon, tip, slot):
             b = QtWidgets.QToolButton()
             b.setIcon(QtGui.QIcon(icon)); b.setIconSize(QtCore.QSize(28,28))
-            b.setFixedSize(40,40); b.setToolTip(tip); b.setAutoRaise(True)
+            b.setFixedSize(28,28); b.setToolTip(tip); b.setAutoRaise(True)
             b.clicked.connect(slot); return b
 
         # ikon adları: add.png, edit.png, delete.png, folder.png, json.png
@@ -440,7 +440,7 @@ class MainWindow(QtWidgets.QMainWindow):
         vtb.addWidget(tool("icons/DefaultPack/edit.png",   "Yeniden adlandır",      self._rename_profile))
         vtb.addWidget(tool("icons/DefaultPack/delete.png", "Profili sil",           self._delete_profile))
         vtb.addWidget(tool("icons/DefaultPack/folder.png", "Profil klasörünü aç",   self._open_profile_folder))
-        vtb.addWidget(tool("icons/DefaultPack/jsondocument.png", "Ayar Dosyasını Aç",     self._open_active_config))
+        vtb.addWidget(tool("icons/DefaultPack/jsondocument.png", "Profil Ayar Dosyasını Aç",     self._open_active_config))
         vtb.addStretch(1)
 
         # 2) Profil listesi (sağında)
