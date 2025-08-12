@@ -29,7 +29,7 @@ Modern ve minimal tasarımı ile üretkenliğinizi artırır.
 ### 1️⃣ Depoyu Klonla
 
 ```bash
-git clone https://github.com/kullaniciadi/viperdeck.git
+git clone https://github.com/Yavuz-Selim-Yigit/ViperDeck.git
 cd viperdeck
 ```
 
