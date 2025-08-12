@@ -1,5 +1,5 @@
-# app.py — VipoDeck (modern üst bar + System Tray + "Kapatınca tepsiye gizle" ayarı)
-import sys, json, time, threading, subprocess, webbrowser
+# app.py — VipoDeck (modern üst bar + System Tray + Ayarlar: tepsi & Windows ile başlat)
+import sys, os, json, time, threading, subprocess, webbrowser
 from pathlib import Path
 from PyQt5 import QtCore, QtGui, QtWidgets
 import pyautogui, keyboard
@@ -27,6 +27,23 @@ DARK  = {
     "card_hover": "#25324a",
     "text_color": "#ffffff"
 }
+
+# ---- Windows Startup (kısayol) sabitleri ----
+STARTUP_FOLDER = os.path.join(
+    os.environ.get("APPDATA", ""), "Microsoft", "Windows", "Start Menu", "Programs", "Startup"
+)
+APP_SHORTCUT = os.path.join(STARTUP_FOLDER, "VipoDeck.lnk")
+
+def _launcher_paths():
+    """
+    Paketlenmiş EXE ise path = sys.executable (arg yok).
+    Script çalışıyorsa path = python.exe, arg olarak script verilir.
+    """
+    if getattr(sys, "frozen", False):
+        # PyInstaller ile paketlenmiş
+        return sys.executable, ""
+    else:
+        return sys.executable, f'"{os.path.abspath(sys.argv[0])}"'
 
 # ---------------- helpers ----------------
 def load_config():
@@ -71,7 +88,7 @@ class TitleBar(QtWidgets.QWidget):
         self._drag_offset = QtCore.QPoint()
         self.setFixedHeight(40)
 
-        # left: app icon + quick tools
+        # left area: app icon + menu icon buttons
         self.leftWrap = QtWidgets.QWidget()
         l = QtWidgets.QHBoxLayout(self.leftWrap)
         l.setContentsMargins(8, 0, 0, 0)
@@ -95,13 +112,13 @@ class TitleBar(QtWidgets.QWidget):
         self.btnTopRight.toggled.connect(self.toprightToggled.emit)
         l.addWidget(self.btnTopRight)
 
-        # monitor menu
+        # monitor menu (popup menu atanacak)
         self.btnMonitor = self._tool("icons/screen.png", tooltip="Monitör Seç")
         self.btnMonitor.setPopupMode(QtWidgets.QToolButton.InstantPopup)
         self.btnMonitor.setMenu(QtWidgets.QMenu(self))
         l.addWidget(self.btnMonitor)
 
-        # settings (popup menu: minimize-to-tray toggle)
+        # settings (popup menu: minimize-to-tray & startup)
         self.btnSettings = self._tool("icons/settings.png", tooltip="Ayarlar")
         self.btnSettings.setPopupMode(QtWidgets.QToolButton.InstantPopup)
         self.btnSettings.setMenu(QtWidgets.QMenu(self))
@@ -156,6 +173,7 @@ class TitleBar(QtWidgets.QWidget):
         b.setAutoRaise(True)
         return b
 
+    # theming
     def applyStyle(self, dark: bool):
         if dark:
             bg = "#0f172a"; fg = "#e2e8f0"; hover = "#1f2a44"
@@ -168,7 +186,7 @@ class TitleBar(QtWidgets.QWidget):
             QToolButton:hover {{ background:{hover}; border-radius:6px; }}
         """)
 
-    # drag move (frameless)
+    # dragging (frameless)
     def mousePressEvent(self, e: QtGui.QMouseEvent):
         if e.button() == QtCore.Qt.LeftButton:
             self._drag = True
@@ -242,7 +260,7 @@ class MainWindow(QtWidgets.QMainWindow):
         self.theme = self.settings.value("theme", "light")
         self.start_top_right = self.settings.value("start_top_right", True, type=bool)
         self.saved_monitor_name = self.settings.value("monitor_name", "", type=str)
-        self.minimize_to_tray = self.settings.value("minimize_to_tray", True, type=bool)  # << yeni ayar
+        self.minimize_to_tray = self.settings.value("minimize_to_tray", True, type=bool)
         self.palette = DARK if self.theme == "dark" else LIGHT
 
         # title bar
@@ -273,7 +291,7 @@ class MainWindow(QtWidgets.QMainWindow):
 
         # monitor & settings menus
         self._rebuild_monitor_menu()
-        self._build_settings_menu()  # << Ayarlar menüsü (minimize_to_tray)
+        self._build_settings_menu()  # Ayarlar menüsü
 
         # place titlebar as the menu widget (top single row)
         self.setMenuWidget(self.titleBar)
@@ -426,15 +444,64 @@ class MainWindow(QtWidgets.QMainWindow):
 
     def _build_settings_menu(self):
         m = QtWidgets.QMenu(self)
+
+        # Kapatınca tepsiye gizle
         act_min_to_tray = QtWidgets.QAction("Kapatınca tepsiye gizle", m, checkable=True)
         act_min_to_tray.setChecked(self.minimize_to_tray)
         act_min_to_tray.toggled.connect(self._toggle_minimize_to_tray)
         m.addAction(act_min_to_tray)
+
+        # Windows ile başlat
+        act_startup = QtWidgets.QAction("Windows ile başlat", m, checkable=True)
+        act_startup.setChecked(self._is_startup_enabled())
+        act_startup.toggled.connect(lambda checked: self._set_startup(checked))
+        m.addAction(act_startup)
+
         self.titleBar.btnSettings.setMenu(m)
 
+    # ----- settings handlers -----
     def _toggle_minimize_to_tray(self, checked: bool):
         self.minimize_to_tray = checked
         self.settings.setValue("minimize_to_tray", checked)
+
+    # Startup helpers
+    def _is_startup_enabled(self):
+        try:
+            return os.path.exists(APP_SHORTCUT)
+        except Exception:
+            return False
+
+    def _set_startup(self, enable: bool):
+        try:
+            if enable:
+                # winshell gerekli
+                try:
+                    import winshell  # pip install winshell
+                except Exception:
+                    QtWidgets.QMessageBox.warning(
+                        self, "Gerekli Paket",
+                        "Windows ile başlat özelliği için 'winshell' paketini yükleyin:\n\npip install winshell"
+                    )
+                    # Menüdeki checkbox'ı eski haline al
+                    self._build_settings_menu()
+                    return
+
+                os.makedirs(STARTUP_FOLDER, exist_ok=True)
+                exe_path, args = _launcher_paths()
+                icon_loc = (os.path.abspath("icons/app.ico"), 0) if os.path.exists("icons/app.ico") else (exe_path, 0)
+                with winshell.shortcut(APP_SHORTCUT) as link:
+                    link.path = exe_path
+                    link.arguments = args
+                    link.description = "VipoDeck - Masaüstü Paneli"
+                    link.icon_location = icon_loc
+            else:
+                if os.path.exists(APP_SHORTCUT):
+                    os.remove(APP_SHORTCUT)
+        except Exception as e:
+            QtWidgets.QMessageBox.warning(self, "Hata", f"Başlangıç ayarı değiştirilemedi:\n{e}")
+        finally:
+            # Menü durumunu senkronize et
+            self._build_settings_menu()
 
     def _on_monitor_chosen(self, action: QtWidgets.QAction):
         self.saved_monitor_name = action.data() or ""
