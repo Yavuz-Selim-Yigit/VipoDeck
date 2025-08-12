@@ -118,8 +118,3 @@ VipoDeck/
 **ViperaDev**
 Yavuz Selim Yiğit — [GitHub](https://github.com/Yavuz-Selim-Yigit) · [LinkedIn](https://www.linkedin.com/in/yavuz-selim-yigit/)
 
----
-
-## 📜 Lisans
-
-Bu proje **MIT Lisansı** ile lisanslanmıştır. Ayrıntılar için [LICENSE](https://github.com/Yavuz-Selim-Yigit/VipoDeck/blob/main/LICENSE) dosyasına bakın.
