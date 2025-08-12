@@ -11,7 +11,7 @@ VipoDeck; Windows üzerinde sık kullandığınız uygulamalara, web sitelerine 
 * 🖥️ **Monitör Seçimi**: Üst bardaki ekran butonundan açılan menü ile hedef monitörü seçme
 * 🧹 **Kısayol Kartları**: [`actions.json`](https://github.com/Yavuz-Selim-Yigit/VipoDeck/blob/main/actions.json) ile tanımlanan ikonlu kartlar (web, uygulama, dosya, tuş kombinasyonu)
 * 💚 **Tooltip**: Kartların ve üst bar ikonlarının üzerine gelince açıklama
-* 🔁 **Yeniden Yükle**: `actions.json` değişikliklerini uygulama açıkken yükleme
+* 🔁 **Yeniden Yükle**: [`actions.json`](https://github.com/Yavuz-Selim-Yigit/VipoDeck/blob/main/actions.json) değişikliklerini uygulama açıkken yükleme
 * 🧱 **Konumlandırma**: Sağ üst modda seçili ekranın sağ üstüne; serbest modda seçili ekranın merkezine taşır ve istenilen yöne hareket ettirilebilir
 * 📋 **Durum Çubuğu**: Alt kısımda `ViperaDev | v1.3.2` metni
 * 👅️ **Kısayol Tuşları**: `Esc` (kapat), `Ctrl+M` (küçült)
