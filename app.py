@@ -1,4 +1,4 @@
-# app.py — PyQt5 kısayol paneli (frameless + 1 satır modern üst bar)
+# app.py — VipoDeck (frameless + 1 satır modern üst bar + System Tray)
 import sys, json, time, threading, subprocess, webbrowser
 from pathlib import Path
 from PyQt5 import QtCore, QtGui, QtWidgets
@@ -125,7 +125,7 @@ class TitleBar(QtWidgets.QWidget):
         self.btnMin.clicked.connect(self.minimizeRequested)
         r.addWidget(self.btnMin)
 
-        self.btnClose = self._tool("icons/exit.png", tooltip="Kapat")
+        self.btnClose = self._tool("icons/exit.png", tooltip="Kapat (Tepsiye Gizle)")
         self.btnClose.clicked.connect(self.closeRequested)
         r.addWidget(self.btnClose)
 
@@ -229,7 +229,7 @@ class MainWindow(QtWidgets.QMainWindow):
         self.setWindowFlags(self.windowFlags() | QtCore.Qt.FramelessWindowHint)
 
         # shortcuts
-        QtWidgets.QShortcut(QtGui.QKeySequence("Esc"), self, activated=self.close)
+        QtWidgets.QShortcut(QtGui.QKeySequence("Esc"), self, activated=self.close)             # tepsiye gizle
         QtWidgets.QShortcut(QtGui.QKeySequence("Ctrl+M"), self, activated=self.showMinimized)
 
         # settings
@@ -246,11 +246,16 @@ class MainWindow(QtWidgets.QMainWindow):
         self.titleBar.openConfigRequested.connect(self._open_config)
         self.titleBar.reloadRequested.connect(self._reload_config)
         self.titleBar.minimizeRequested.connect(self.showMinimized)
-        self.titleBar.closeRequested.connect(self.close)
+        self.titleBar.closeRequested.connect(self.close)  # closeEvent'te tepsiye gizlenecek
 
         # central UI
         self._build_ui()
         self._build_statusbar()
+
+        # system tray
+        self._allow_close = False
+        self._tray_tip_shown = False
+        self._setup_tray()
 
         # apply theme & icons
         self._apply_theme()
@@ -279,6 +284,52 @@ class MainWindow(QtWidgets.QMainWindow):
         # reflect saved toggles
         self.titleBar.btnTheme.setChecked(self.theme == "dark")
         self.titleBar.btnTopRight.setChecked(self.start_top_right)
+
+    # ----- system tray -----
+    def _setup_tray(self):
+        icon_path = "icons/app.ico"
+        self.tray = QtWidgets.QSystemTrayIcon(QtGui.QIcon(icon_path), self)
+        self.tray.setToolTip("VipoDeck arka planda çalışıyor")
+
+        menu = QtWidgets.QMenu()
+        act_show = menu.addAction("Göster")
+        act_show.triggered.connect(self._restore_from_tray)
+
+        menu.addSeparator()
+        act_quit = menu.addAction("Çıkış")
+        act_quit.triggered.connect(self._quit_from_tray)
+
+        self.tray.setContextMenu(menu)
+        self.tray.activated.connect(self._tray_activated)
+        self.tray.show()
+
+    def _tray_activated(self, reason):
+        # Çift tıklama veya simge tıklama ile geri getir
+        if reason == QtWidgets.QSystemTrayIcon.DoubleClick:
+            self._restore_from_tray()
+
+    def _restore_from_tray(self):
+        self.show()
+        self.raise_()
+        self.activateWindow()
+
+    def _quit_from_tray(self):
+        self._allow_close = True
+        QtWidgets.qApp.quit()
+
+    def closeEvent(self, event: QtGui.QCloseEvent):
+        # Pencereyi kapatmak yerine tepsiye gizle
+        if self._allow_close:
+            return super().closeEvent(event)
+        event.ignore()
+        self.hide()
+        if not self._tray_tip_shown and self.tray.isVisible():
+            # sadece ilk kez bilgi ver
+            try:
+                self.tray.showMessage("VipoDeck", "Arka planda çalışmaya devam ediyor.\nTepsideki simgeye çift tıklayarak geri getirebilirsiniz.", QtWidgets.QSystemTrayIcon.Information, 3500)
+            except Exception:
+                pass
+            self._tray_tip_shown = True
 
     # ----- status bar -----
     def _build_statusbar(self):
@@ -424,7 +475,7 @@ class MainWindow(QtWidgets.QMainWindow):
         if checked:
             self._move_to_selected_screen_top_right()
         else:
-            self._center_on_selected_screen()  # << serbest moda geçince ortala
+            self._center_on_selected_screen()
         self._update_toolbar_icons()
 
     def _open_config(self):
