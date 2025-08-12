@@ -150,7 +150,7 @@ VipoDeck/
 │  ├─ reload.png
 │  ├─ minimize.png
 │  └─ exit.png
-└─ docs/                  # Ekran görüntüleri (opsiyonel)
+└─ docs/                  # Ekran görüntüleri
    ├─ screenshot_light.png
    └─ screenshot_dark.png
 ```
