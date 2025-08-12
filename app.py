@@ -339,7 +339,7 @@ class MainWindow(QtWidgets.QMainWindow):
 
     def _update_statusbar_text(self):
         self.status.setStyleSheet(f"color:{self.palette['text_color']}; font-size:12px;")
-        self.status.showMessage("ViperaDev | v1.3.2")
+        self.status.showMessage("ViperaDev © 2025 | by yselimygt | v1.3.2")
 
     # ----- UI -----
     def _build_ui(self):
