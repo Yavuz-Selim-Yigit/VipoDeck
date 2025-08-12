@@ -138,7 +138,6 @@ class TitleBar(QtWidgets.QWidget):
         self.btnMonitor.setPopupMode(QtWidgets.QToolButton.InstantPopup)
         self.btnMonitor.setMenu(QtWidgets.QMenu(self)); l.addWidget(self.btnMonitor)
 
-        # Settings popup (tray & startup & hotkey & fullscreen)
         self.btnSettings = self._tool("icons/settings.png", "Ayarlar")
         self.btnSettings.setPopupMode(QtWidgets.QToolButton.InstantPopup)
         self.btnSettings.setMenu(QtWidgets.QMenu(self)); l.addWidget(self.btnSettings)
@@ -183,21 +182,28 @@ class TitleBar(QtWidgets.QWidget):
             QToolButton:hover {{ background:{hover}; border-radius:6px; }}
         """)
 
-    # dragging
+    # dragging — tam ekranda devre dışı
     def mousePressEvent(self, e: QtGui.QMouseEvent):
-        if e.button() == QtCore.Qt.LeftButton:
+        if e.button() == QtCore.Qt.LeftButton and not self.window().isFullScreen():
             self._drag = True
             self._drag_offset = e.globalPos() - self.window().frameGeometry().topLeft()
             e.accept()
         else:
             super().mousePressEvent(e)
+
     def mouseMoveEvent(self, e: QtGui.QMouseEvent):
-        if self._drag and e.buttons() & QtCore.Qt.LeftButton:
+        if self._drag and e.buttons() & QtCore.Qt.LeftButton and not self.window().isFullScreen():
             self.window().move(e.globalPos() - self._drag_offset); e.accept()
         else:
             super().mouseMoveEvent(e)
+
     def mouseReleaseEvent(self, e: QtGui.QMouseEvent):
-        self._drag = False; super().mouseReleaseEvent(e)
+        self._drag = False
+        super().mouseReleaseEvent(e)
+
+    # çift tıklama — hiçbir şey yapma (özellikle tam ekranda)
+    def mouseDoubleClickEvent(self, e: QtGui.QMouseEvent):
+        e.ignore()
 
 # ---------------- card button ----------------
 class CardButton(QtWidgets.QPushButton):
@@ -248,10 +254,13 @@ class MainWindow(QtWidgets.QMainWindow):
         self.start_top_right = self.settings.value("start_top_right", True, type=bool)
         self.saved_monitor_name = self.settings.value("monitor_name", "", type=str)
         self.minimize_to_tray = self.settings.value("minimize_to_tray", True, type=bool)
+
+        # DEĞİŞTİ: varsayılan global hotkey -> ctrl+v+d
         self.global_hotkey_enabled = self.settings.value("global_hotkey_enabled", True, type=bool)
-        self.global_hotkey_combo = self.settings.value("global_hotkey_combo", "ctrl+alt+v", type=str)
+        self.global_hotkey_combo = self.settings.value("global_hotkey_combo", "ctrl+v+d", type=str)
+
         self.fullscreen_enabled = self.settings.value("fullscreen_enabled", False, type=bool)
-        self.palette = DARK if self.theme == "dark" else LIGHT
+        self.palette = DARK if self.theme == "dark" else LIGHT()
 
         # title bar
         self.titleBar = TitleBar(APP_NAME, icon_path="icons/app.ico")
@@ -300,7 +309,7 @@ class MainWindow(QtWidgets.QMainWindow):
         self.titleBar.btnTheme.setChecked(self.theme == "dark")
         self.titleBar.btnTopRight.setChecked(self.start_top_right)
 
-        # GLOBAL HOTKEY (uygulama genel kısayolu)
+        # GLOBAL HOTKEY
         self._registered_hotkey = None
         if self.global_hotkey_enabled:
             self._register_global_hotkey()
@@ -333,6 +342,7 @@ class MainWindow(QtWidgets.QMainWindow):
         self._allow_close = True
         QtWidgets.qApp.quit()
     def closeEvent(self, event: QtGui.QCloseEvent):
+        # TEK closeEvent: tepsi davranışı korunur
         if self._allow_close:
             return super().closeEvent(event)
         if self.minimize_to_tray:
@@ -427,13 +437,12 @@ class MainWindow(QtWidgets.QMainWindow):
         act_startup.toggled.connect(lambda checked: self._set_startup(checked))
         m.addAction(act_startup)
 
-        # NEW: Global hotkey toggle
-        act_hotkey = QtWidgets.QAction("Kısayol ile aç (Ctrl+Alt+V)", m, checkable=True)
+        # Güncellendi: kısayol metni Ctrl+V+D
+        act_hotkey = QtWidgets.QAction("Kısayol ile aç (Ctrl+V+D)", m, checkable=True)
         act_hotkey.setChecked(self.global_hotkey_enabled)
         act_hotkey.toggled.connect(self._toggle_global_hotkey)
         m.addAction(act_hotkey)
 
-        # NEW: Fullscreen toggle
         act_fullscreen = QtWidgets.QAction("Tam ekran modu", m, checkable=True)
         act_fullscreen.setChecked(self.fullscreen_enabled)
         act_fullscreen.toggled.connect(self._apply_fullscreen)
@@ -555,6 +564,7 @@ class MainWindow(QtWidgets.QMainWindow):
         except Exception:
             pass
         try:
+            # Yeni kombinasyon: ctrl+v+d
             self._registered_hotkey = keyboard.add_hotkey(self.global_hotkey_combo, self._on_global_hotkey)
         except Exception as e:
             QtWidgets.QMessageBox.information(self, "Uyarı",
@@ -569,7 +579,6 @@ class MainWindow(QtWidgets.QMainWindow):
             pass
 
     def _on_global_hotkey(self):
-        # Tepside/arkaplanda olsa da öne getir
         if self.isMinimized() or not self.isVisible():
             self._restore_from_tray()
         else:
@@ -590,10 +599,6 @@ class MainWindow(QtWidgets.QMainWindow):
             self.showFullScreen()
         else:
             self.showNormal()
-
-    def closeEvent(self, event: QtGui.QCloseEvent):
-        # override edilmişti; tray mantığı yukarıda
-        super().closeEvent(event)
 
 # ---------------- run ----------------
 def main():
