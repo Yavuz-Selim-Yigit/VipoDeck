@@ -143,18 +143,18 @@ class TitleBar(QtWidgets.QWidget):
         self.btnTopRight = self._tool("", "Pencere Konumu"); self.btnTopRight.setCheckable(True)
         self.btnTopRight.toggled.connect(self.toprightToggled.emit); l.addWidget(self.btnTopRight)
 
-        self.btnMonitor = self._tool("icons/screen.png", "Monitör Seç")
+        self.btnMonitor = self._tool("icons/DefaultPack/screen.png", "Monitör Seç")
         self.btnMonitor.setPopupMode(QtWidgets.QToolButton.InstantPopup)
         self.btnMonitor.setMenu(QtWidgets.QMenu(self)); l.addWidget(self.btnMonitor)
 
-        self.btnSettings = self._tool("icons/settings.png", "Ayarlar")
+        self.btnSettings = self._tool("icons/DefaultPack/settings.png", "Ayarlar")
         self.btnSettings.setPopupMode(QtWidgets.QToolButton.InstantPopup)
         self.btnSettings.setMenu(QtWidgets.QMenu(self)); l.addWidget(self.btnSettings)
 
-        self.btnCfg = self._tool("icons/jsondocument.png", "Ayar Dosyasını Aç")
+        self.btnCfg = self._tool("icons/DefaultPack/jsondocument.png", "Ayar Dosyasını Aç")
         l.addWidget(self.btnCfg)
 
-        self.btnReload = self._tool("icons/reload.png", "Kısayolları Yeniden Yükle")
+        self.btnReload = self._tool("icons/DefaultPack/reload.png", "Kısayolları Yeniden Yükle")
         l.addWidget(self.btnReload)
 
         # center: title
@@ -168,8 +168,8 @@ class TitleBar(QtWidgets.QWidget):
         self.rightWrap = QtWidgets.QWidget()
         r = QtWidgets.QHBoxLayout(self.rightWrap)
         r.setContentsMargins(0, 0, 6, 0); r.setSpacing(6)
-        self.btnMin = self._tool("icons/minimize.png", "Küçült"); self.btnMin.clicked.connect(self.minimizeRequested); r.addWidget(self.btnMin)
-        self.btnClose = self._tool("icons/exit.png", "Kapat"); self.btnClose.clicked.connect(self.closeRequested); r.addWidget(self.btnClose)
+        self.btnMin = self._tool("icons/DefaultPack/minimize.png", "Küçült"); self.btnMin.clicked.connect(self.minimizeRequested); r.addWidget(self.btnMin)
+        self.btnClose = self._tool("icons/DefaultPack/exit.png", "Kapat"); self.btnClose.clicked.connect(self.closeRequested); r.addWidget(self.btnClose)
 
         h = QtWidgets.QHBoxLayout(self); h.setContentsMargins(0, 0, 0, 0); h.setSpacing(0)
         h.addWidget(self.leftWrap); h.addWidget(self.title, 1); h.addWidget(self.rightWrap)
@@ -273,7 +273,7 @@ class MainWindow(QtWidgets.QMainWindow):
         self.palette = DARK if self.theme == "dark" else LIGHT
 
         # ---- Üst bar
-        self.titleBar = TitleBar(APP_NAME, icon_path="icons/app.ico")
+        self.titleBar = TitleBar(APP_NAME, icon_path="icons/DefaultPack/app.ico")
         self.titleBar.themeToggled.connect(self._toggle_theme)
         self.titleBar.toprightToggled.connect(self._toggle_topright)
         self.titleBar.openConfigRequested.connect(self._open_active_config)
@@ -363,11 +363,11 @@ class MainWindow(QtWidgets.QMainWindow):
             btn.setToolTip(tip); btn.clicked.connect(slot); btn.setAutoRaise(True)
             iconRow.addWidget(btn); return btn
 
-        self.btnProfNew   = ib("icons/add.png",    "Yeni profil",           self._profile_new)
-        self.btnProfRen   = ib("icons/edit.png",   "Yeniden adlandır",      self._profile_rename)
-        self.btnProfDel   = ib("icons/delete.png", "Sil",                    self._profile_delete)
-        self.btnProfOpen  = ib("icons/folder.png", "Profil klasörünü aç",   self._profile_open_folder)
-        self.btnProfJson  = ib("icons/jsondocument.png","actions.json'u aç",self._open_active_config)
+        self.btnProfNew   = ib("icons/DefaultPack/add.png",    "Yeni profil",           self._profile_new)
+        self.btnProfRen   = ib("icons/DefaultPack/edit.png",   "Yeniden adlandır",      self._profile_rename)
+        self.btnProfDel   = ib("icons/DefaultPack/delete.png", "Sil",                    self._profile_delete)
+        self.btnProfOpen  = ib("icons/DefaultPack/folder.png", "Profil klasörünü aç",   self._profile_open_folder)
+        self.btnProfJson  = ib("icons/DefaultPack/jsondocument.png","actions.json'u aç",self._open_active_config)
 
         v.addLayout(iconRow)
 
@@ -391,7 +391,7 @@ class MainWindow(QtWidgets.QMainWindow):
 
     # ----- Tray -----
     def _setup_tray(self):
-        icon_path = "icons/app.ico"
+        icon_path = "icons/DefaultPack/app.ico"
         self.tray = QtWidgets.QSystemTrayIcon(QtGui.QIcon(icon_path), self)
         self.tray.setToolTip(f"{APP_NAME} arka planda çalışıyor")
 
@@ -449,8 +449,8 @@ class MainWindow(QtWidgets.QMainWindow):
         self._update_statusbar_text(); self._update_toolbar_icons()
 
     def _update_toolbar_icons(self):
-        self.titleBar.btnTheme.setIcon(QtGui.QIcon("icons/dark-theme.png" if self.theme=="dark" else "icons/light-theme.png"))
-        self.titleBar.btnTopRight.setIcon(QtGui.QIcon("icons/topright.png" if self.start_top_right else "icons/free.png"))
+        self.titleBar.btnTheme.setIcon(QtGui.QIcon("icons/DefaultPack/dark-theme.png" if self.theme=="dark" else "icons/DefaultPack/light-theme.png"))
+        self.titleBar.btnTopRight.setIcon(QtGui.QIcon("icons/DefaultPack/topright.png" if self.start_top_right else "icons/DefaultPack/free.png"))
 
     # ----- Profiller -----
     def _profile_dir(self, name: str) -> Path:
@@ -612,7 +612,7 @@ class MainWindow(QtWidgets.QMainWindow):
                 import winshell  # noqa
                 os.makedirs(STARTUP_FOLDER, exist_ok=True)
                 exe_path, args = _launcher_paths()
-                icon_loc = (os.path.abspath("icons/app.ico"), 0) if os.path.exists("icons/app.ico") else (exe_path, 0)
+                icon_loc = (os.path.abspath("icons/DefaultPack/app.ico"), 0) if os.path.exists("icons/DefaultPack/app.ico") else (exe_path, 0)
                 with winshell.shortcut(APP_SHORTCUT) as link:
                     link.path = exe_path; link.arguments = args
                     link.description = f"{APP_NAME} - Masaüstü Paneli"
@@ -747,7 +747,7 @@ def main():
 
     app = QtWidgets.QApplication(sys.argv)
     app.setOrganizationName(ORG); app.setApplicationName(APP_NAME)
-    app.setWindowIcon(QtGui.QIcon("icons/app.ico"))
+    app.setWindowIcon(QtGui.QIcon("icons/DefaultPack/app.ico"))
 
     w = MainWindow(); w.show()
     sys.exit(app.exec_())
