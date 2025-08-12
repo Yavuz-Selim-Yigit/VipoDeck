@@ -16,7 +16,7 @@ VipoDeck; Windows üzerinde sık kullandığınız uygulamalara, web sitelerine 
 * 🤗 **Kısayol Tuşları**: `Esc` (kapat), `Ctrl+M` (küçült)
 
 ## ⬇️ İndirip Kullanmak İçin
-* [İndir](https://github.com/Yavuz-Selim-Yigit/VipoDeck/releases/download/VipoDeck/VipoDeck-v1_3_2.rar)
+* [v1.3.2 İndir](https://github.com/Yavuz-Selim-Yigit/VipoDeck/releases/download/VipoDeck/VipoDeck-v1_3_2.rar)
 
 ---
 
