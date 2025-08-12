@@ -1,8 +1,6 @@
-# 🐍 ViperDeck
+# 🐍 VipoDeck
 
-> **Not:** Kaynak kodda `APP_NAME = "VipoDeck "` ve `APP = "VipoDeck "` olarak geçiyor. Repoda uygulama adını **ViperDeck** olarak kullanıyorsan, bu iki sabiti de `"ViperDeck"` yapmanı öneririm.
-
-ViperDeck; Windows üzerinde sık kullandığınız uygulamalara, web sitelerine ve klavye kısayollarına tek tıkla ulaşmanızı sağlayan, **frameless (çerçevesiz)**, **tek satır modern üst barlı** bir **kısayol paneli**dir. Tasarım minimaldir; ikon odaklı kullanım ve tema/konum kontrolleri üst bardan sağlanır.
+VipoDeck; Windows üzerinde sık kullandığınız uygulamalara, web sitelerine ve klavye kısayollarına tek tıkla ulaşmanızı sağlayan, **frameless (çerçevesiz)**, **tek satır modern üst barlı** bir **kısayol paneli**dir. Tasarım minimaldir; ikon odaklı kullanım ve tema/konum kontrolleri üst bardan sağlanır.
 
 ---
 
@@ -25,8 +23,8 @@ ViperDeck; Windows üzerinde sık kullandığınız uygulamalara, web sitelerine
 ### 1) Depoyu Klonla
 
 ```bash
-git clone https://github.com/Yavuz-Selim-Yigit/ViperDeck.git
-cd viperdeck
+git clone https://github.com/Yavuz-Selim-Yigit/VipoDeck.git
+cd VipoDeck
 ```
 
 ### 2) Sanal Ortam ve Bağımlılıklar
@@ -137,7 +135,7 @@ Aşağıdaki ikon adları proje içindeki `icons/` klasöründen yüklenir:
 ## 📂 Proje Yapısı
 
 ```
-viperdeck/
+VipoDeck/
 ├─ app.py                 # Ana uygulama (frameless + custom title bar)
 ├─ actions.json           # Kart tanımları
 ├─ requirements.txt       # Bağımlılıklar
