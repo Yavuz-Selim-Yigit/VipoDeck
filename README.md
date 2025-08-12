@@ -25,7 +25,7 @@ ViperDeck; Windows üzerinde sık kullandığınız uygulamalara, web sitelerine
 ### 1) Depoyu Klonla
 
 ```bash
-git clone https://github.com/kullaniciadi/viperdeck.git
+git clone https://github.com/Yavuz-Selim-Yigit/ViperDeck.git
 cd viperdeck
 ```
 
