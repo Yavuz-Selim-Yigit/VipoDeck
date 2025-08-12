@@ -169,4 +169,3 @@ Yavuz Selim Yiğit — [GitHub](https://github.com/kullaniciadi) · [LinkedIn](h
 ## 📜 Lisans
 
 Bu proje **MIT Lisansı** ile lisanslanmıştır. Ayrıntılar için [LICENSE](LICENSE) dosyasına bakın.
-
