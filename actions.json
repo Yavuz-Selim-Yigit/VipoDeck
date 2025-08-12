@@ -1,21 +1,21 @@
 {
   "buttons": [
-    { "label": "GPT", "icon": "icons/gpt.png", "type": "open", "target": "https://chat.openai.com", "category": "Web" },
-    { "label": "VS Code", "icon": "icons/vscode.png", "type": "open", "target": "C:\\Users\\USERNAME\\AppData\\Local\\Programs\\Microsoft VS Code\\Code.exe", "category": "Yazılım" },
-    { "label": "Unreal Engine", "icon": "icons/unreal.png", "type": "open", "target": "C:\\Program Files\\Epic Games\\UE_5.6\\Engine\\Binaries\\Win64\\UnrealEditor.exe", "category": "Game Dev" },
-    { "label": "Unity", "icon": "icons/unity.png", "type": "open", "target": "C:\\Program Files\\Unity Hub\\Unity Hub.exe", "category": "Game Dev" },
-    { "label": "Blender", "icon": "icons/blender.png", "type": "open", "target": "C:\\Program Files\\Blender Foundation\\Blender 4.4\\blender-launcher.exe", "category": "Game Dev" },
-    { "label": "YouTube", "icon": "icons/youtube.png", "type": "open", "target": "https://youtube.com", "category": "Web" },
-    { "label": "YouTube Music", "icon": "icons/ytmusic.png", "type": "open", "target": "https://music.youtube.com", "category": "Web" },
-    { "label": "WhatsApp Web", "icon": "icons/whatsapp.png", "type": "open", "target": "https://web.whatsapp.com", "category": "İletişim" },
-    { "label": "GitHub Web", "icon": "icons/githubweb.png", "type": "open", "target": "https://github.com", "category": "Yazılım" },
-    { "label": "GitHub Desktop", "icon": "icons/github.png", "type": "open", "target": "C:\\Users\\USERNAME\\AppData\\Local\\GitHubDesktop\\GitHubDesktop.exe", "category": "Yazılım" },
-    { "label": "Google", "icon": "icons/google.png", "type": "open", "target": "https://google.com", "category": "Web" },
-    { "label": "Gmail", "icon": "icons/gmail.png", "type": "open", "target": "https://mail.google.com", "category": "İletişim" },
-    { "label": "Google Drive", "icon": "icons/drive.png", "type": "open", "target": "https://drive.google.com", "category": "Depolama" },
-    { "label": "Canva", "icon": "icons/canva.png", "type": "open", "target": "C:\\Users\\USERNAME\\AppData\\Local\\Programs\\Canva\\Canva.exe", "category": "Grafik Tasarım" },
-    { "label": "Figma", "icon": "icons/figma.png", "type": "open", "target": "C:\\Users\\USERNAME\\AppData\\Local\\Figma\\app-124.1.16\\Figma.exe", "category": "Grafik Tasarım" }
-],
+    { "label": "GPT", "icon": "icons/gpt.png", "type": "open", "target": "https://chat.openai.com", "categories": "AI" },
+    { "label": "VS Code", "icon": "icons/vscode.png", "type": "open", "target": "C:/Users/USERNAME/AppData/Local/Programs/Microsoft VS Code/Code.exe", "categories": ["Yazılım", "Game Dev"] },
+    { "label": "Unreal Engine", "icon": "icons/unreal.png", "type": "open", "target": "C:/Program Files/Epic Games/UE_5.6/Engine/Binaries/Win64/UnrealEditor.exe", "categories": "Game Dev" },
+    { "label": "Unity", "icon": "icons/unity.png", "type": "open", "target": "C:/Program Files/Unity Hub/Unity Hub.exe", "categories": "Game Dev" },
+    { "label": "Blender", "icon": "icons/blender.png", "type": "open", "target": "C:/Program Files/Blender Foundation/Blender 4.4/blender-launcher.exe", "categories": ["Game Dev", "Tasarım"] },
+    { "label": "YouTube", "icon": "icons/youtube.png", "type": "open", "target": "https://youtube.com", "categories": "Web" },
+    { "label": "YouTube Music", "icon": "icons/ytmusic.png", "type": "open", "target": "https://music.youtube.com", "categories": ["Web", "Müzik"] },
+    { "label": "WhatsApp Web", "icon": "icons/whatsapp.png", "type": "open", "target": "https://web.whatsapp.com", "categories": ["İletişim", "Web"] },
+    { "label": "GitHub Web", "icon": "icons/githubweb.png", "type": "open", "target": "https://github.com", "categories": "Yazılım" },
+    { "label": "GitHub Desktop", "icon": "icons/github.png", "type": "open", "target": "C:/Users/USERNAME/AppData/Local/GitHubDesktop/GitHubDesktop.exe", "categories": ["Yazılım", "Game Dev"] },
+    { "label": "Google", "icon": "icons/google.png", "type": "open", "target": "https://google.com", "categories": "Web" },
+    { "label": "Gmail", "icon": "icons/gmail.png", "type": "open", "target": "https://mail.google.com", "categories": "İletişim" },
+    { "label": "Google Drive", "icon": "icons/drive.png", "type": "open", "target": "https://drive.google.com", "categories": ["Bulut","Web"] },
+    { "label": "Canva", "icon": "icons/canva.png", "type": "open", "target": "C:/Users/USERNAME/AppData/Local/Programs/Canva/Canva.exe", "categories": "Tasarım" },
+    { "label": "Figma", "icon": "icons/figma.png", "type": "open", "target": "C:/Users/USERNAME/AppData/Local/Figma/app-124.1.16/Figma.exe", "categories": "Tasarım" }
+  ],
   "hotkeys": {
     "ctrl+alt+1": 0,
     "ctrl+alt+2": 1
