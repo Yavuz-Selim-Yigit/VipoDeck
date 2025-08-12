@@ -4,21 +4,20 @@ from pathlib import Path
 from PyQt5 import QtCore, QtGui, QtWidgets
 import pyautogui, keyboard
 
-APP_NAME   = "Kısayol Paneli"
+APP_NAME   = "VipoDeck "
 ORG        = "ViperaDev"
-APP        = "ShortcutPanel"
+APP        = "VipoDeck "
 CONFIG_PATH = Path(__file__).with_name("actions.json")
 
 LIGHT = {
-    "bg": "#f5f7fa",       # sayfa arka planı (açık)
-    "fg": "#1e293b",       # metin rengi
+    "bg": "#f5f7fa",
+    "fg": "#1e293b",
     "muted": "#64748b",
-    "card_bg": "#ffffff",  # KARTLAR AÇIK OLMALI
+    "card_bg": "#ffffff",
     "card_border": "#e2e8f0",
     "card_hover": "#f1f5f9",
     "text_color": "#000000"
 }
-
 DARK  = {
     "bg": "#0f172a",
     "fg": "#e2e8f0",
@@ -28,7 +27,6 @@ DARK  = {
     "card_hover": "#25324a",
     "text_color": "#ffffff"
 }
-
 
 # ---------------- helpers ----------------
 def load_config():
@@ -66,13 +64,11 @@ class TitleBar(QtWidgets.QWidget):
     toprightToggled = QtCore.pyqtSignal(bool)       # checked
     openConfigRequested = QtCore.pyqtSignal()
     reloadRequested = QtCore.pyqtSignal()
-    monitorMenuRequested = QtCore.pyqtSignal(QtWidgets.QToolButton)
 
     def __init__(self, title: str, icon_path: str = None, parent=None):
         super().__init__(parent)
         self._drag = False
         self._drag_offset = QtCore.QPoint()
-
         self.setFixedHeight(40)
 
         # left area: app icon + menu icon buttons
@@ -99,7 +95,7 @@ class TitleBar(QtWidgets.QWidget):
         self.btnTopRight.toggled.connect(self.toprightToggled.emit)
         l.addWidget(self.btnTopRight)
 
-        # monitor menu
+        # monitor menu (popup menu atanacak)
         self.btnMonitor = self._tool("icons/screen.png", tooltip="Monitör Seç")
         self.btnMonitor.setPopupMode(QtWidgets.QToolButton.InstantPopup)
         self.btnMonitor.setMenu(QtWidgets.QMenu(self))
@@ -144,7 +140,6 @@ class TitleBar(QtWidgets.QWidget):
         # wire menu actions
         self.btnCfg.clicked.connect(self.openConfigRequested)
         self.btnReload.clicked.connect(self.reloadRequested)
-        self.monitorMenuRequested.emit(self.btnMonitor)
 
     def _tool(self, icon_path: str, tooltip: str):
         b = QtWidgets.QToolButton()
@@ -252,7 +247,6 @@ class MainWindow(QtWidgets.QMainWindow):
         self.titleBar.reloadRequested.connect(self._reload_config)
         self.titleBar.minimizeRequested.connect(self.showMinimized)
         self.titleBar.closeRequested.connect(self.close)
-        # monitor button menu will be built after UI init
 
         # central UI
         self._build_ui()
@@ -272,9 +266,11 @@ class MainWindow(QtWidgets.QMainWindow):
         # place titlebar as the menu widget (top single row)
         self.setMenuWidget(self.titleBar)
 
-        # move to selected screen/top-right on start
+        # start position according to mode
         if self.start_top_right:
             QtCore.QTimer.singleShot(0, self._move_to_selected_screen_top_right)
+        else:
+            QtCore.QTimer.singleShot(0, self._center_on_selected_screen)
 
         # keep monitor list fresh
         QtWidgets.QApplication.instance().screenAdded.connect(lambda s: self._rebuild_monitor_menu())
@@ -292,7 +288,7 @@ class MainWindow(QtWidgets.QMainWindow):
 
     def _update_statusbar_text(self):
         self.status.setStyleSheet(f"color:{self.palette['text_color']}; font-size:12px;")
-        self.status.showMessage("ViperaDev | v1.0.0")
+        self.status.showMessage("ViperaDev | v1.3.2")
 
     # ----- UI -----
     def _build_ui(self):
@@ -328,7 +324,6 @@ class MainWindow(QtWidgets.QMainWindow):
         self._update_toolbar_icons()
 
     def _update_toolbar_icons(self):
-        # dynamic icons for theme/topright
         theme_icon = "icons/dark-theme.png" if self.theme == "dark" else "icons/light-theme.png"
         self.titleBar.btnTheme.setIcon(QtGui.QIcon(theme_icon))
         pos_icon = "icons/topright.png" if self.start_top_right else "icons/free.png"
@@ -363,15 +358,19 @@ class MainWindow(QtWidgets.QMainWindow):
         else: act_auto.setChecked(True)
 
         group.triggered.connect(self._on_monitor_chosen)
-
         self.titleBar.btnMonitor.setMenu(m)
 
     def _on_monitor_chosen(self, action: QtWidgets.QAction):
         self.saved_monitor_name = action.data() or ""
         self.settings.setValue("monitor_name", self.saved_monitor_name)
-        self._move_to_selected_screen_top_right()
+        # seçime göre yeniden konumlandır
+        if self.start_top_right:
+            self._move_to_selected_screen_top_right()
+        else:
+            self._center_on_selected_screen()
 
-    def _move_to_selected_screen_top_right(self):
+    # ----- positioning -----
+    def _screen_geometry(self):
         target = None
         if self.saved_monitor_name:
             for s in QtWidgets.QApplication.screens():
@@ -379,9 +378,19 @@ class MainWindow(QtWidgets.QMainWindow):
                     target = s; break
         if not target:
             target = QtWidgets.QApplication.primaryScreen()
-        if not target: return
-        avail = target.availableGeometry()
+        return target.availableGeometry() if target else None
+
+    def _move_to_selected_screen_top_right(self):
+        avail = self._screen_geometry()
+        if not avail: return
         self.move(avail.right() - self.width(), avail.top())
+
+    def _center_on_selected_screen(self):
+        avail = self._screen_geometry()
+        if not avail: return
+        cx = avail.center().x() - self.width() // 2
+        cy = avail.center().y() - self.height() // 2
+        self.move(cx, cy)
 
     # ----- grid -----
     def _clear_grid(self):
@@ -414,6 +423,8 @@ class MainWindow(QtWidgets.QMainWindow):
         self.settings.setValue("start_top_right", checked)
         if checked:
             self._move_to_selected_screen_top_right()
+        else:
+            self._center_on_selected_screen()  # << serbest moda geçince ortala
         self._update_toolbar_icons()
 
     def _open_config(self):
