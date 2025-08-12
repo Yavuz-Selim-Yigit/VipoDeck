@@ -4,9 +4,9 @@ from pathlib import Path
 from PyQt5 import QtCore, QtGui, QtWidgets
 import pyautogui, keyboard
 
-APP_NAME   = "VipoDeck "
+APP_NAME   = "VipoDeck"
 ORG        = "ViperaDev"
-APP        = "VipoDeck "
+APP        = "VipoDeck"
 CONFIG_PATH = Path(__file__).with_name("actions.json")
 
 LIGHT = {
@@ -40,7 +40,6 @@ def _launcher_paths():
     Script çalışıyorsa path = python.exe, arg olarak script verilir.
     """
     if getattr(sys, "frozen", False):
-        # PyInstaller ile paketlenmiş
         return sys.executable, ""
     else:
         return sys.executable, f'"{os.path.abspath(sys.argv[0])}"'
@@ -72,6 +71,51 @@ def run_action(a: dict):
         if seq:
             try: pyautogui.hotkey(*seq)
             except Exception: pass
+
+# --- winshell yoksa otomatik kurma ---
+def ensure_winshell_installed(parent=None) -> bool:
+    """
+    winshell yüklü değilse kullanıcıya sorar, onaylarsa pip ile kurar.
+    Kurulum başarılıysa True, aksi halde False döner.
+    """
+    try:
+        import winshell  # noqa: F401
+        return True
+    except Exception:
+        pass
+
+    ret = QtWidgets.QMessageBox.question(
+        parent,
+        "Gerekli Paket",
+        "Windows ile başlat özelliği için 'winshell' paketi gerekiyor.\n"
+        "Şimdi otomatik kurulsun mu?",
+        QtWidgets.QMessageBox.Yes | QtWidgets.QMessageBox.No,
+        QtWidgets.QMessageBox.Yes,
+    )
+    if ret != QtWidgets.QMessageBox.Yes:
+        return False
+
+    try:
+        QtWidgets.QApplication.setOverrideCursor(QtCore.Qt.WaitCursor)
+        subprocess.check_call([sys.executable, "-m", "pip", "install", "--upgrade", "pip"])
+        subprocess.check_call([sys.executable, "-m", "pip", "install", "winshell"])
+    except Exception as e:
+        QtWidgets.QApplication.restoreOverrideCursor()
+        QtWidgets.QMessageBox.warning(
+            parent, "Kurulum Hatası",
+            f"'winshell' kurulamadı.\n\nHata:\n{e}\n\n"
+            "Elle kurmak için:\n  pip install winshell"
+        )
+        return False
+    finally:
+        try: QtWidgets.QApplication.restoreOverrideCursor()
+        except Exception: pass
+
+    try:
+        import winshell  # noqa: F401
+        return True
+    except Exception:
+        return False
 
 # ---------------- title bar (one-line modern) ----------------
 class TitleBar(QtWidgets.QWidget):
@@ -118,7 +162,7 @@ class TitleBar(QtWidgets.QWidget):
         self.btnMonitor.setMenu(QtWidgets.QMenu(self))
         l.addWidget(self.btnMonitor)
 
-        # settings (popup menu: minimize-to-tray & startup)
+        # settings (popup menü: tepsi & startup)
         self.btnSettings = self._tool("icons/settings.png", tooltip="Ayarlar")
         self.btnSettings.setPopupMode(QtWidgets.QToolButton.InstantPopup)
         self.btnSettings.setMenu(QtWidgets.QMenu(self))
@@ -160,7 +204,7 @@ class TitleBar(QtWidgets.QWidget):
         h.addWidget(self.title, 1)
         h.addWidget(self.rightWrap)
 
-        # wire menu actions
+        # wire actions
         self.btnCfg.clicked.connect(self.openConfigRequested)
         self.btnReload.clicked.connect(self.reloadRequested)
 
@@ -173,7 +217,6 @@ class TitleBar(QtWidgets.QWidget):
         b.setAutoRaise(True)
         return b
 
-    # theming
     def applyStyle(self, dark: bool):
         if dark:
             bg = "#0f172a"; fg = "#e2e8f0"; hover = "#1f2a44"
@@ -289,9 +332,9 @@ class MainWindow(QtWidgets.QMainWindow):
         self.cfg = load_config()
         self._rebuild_cards()
 
-        # monitor & settings menus
+        # menus
         self._rebuild_monitor_menu()
-        self._build_settings_menu()  # Ayarlar menüsü
+        self._build_settings_menu()
 
         # place titlebar as the menu widget (top single row)
         self.setMenuWidget(self.titleBar)
@@ -359,7 +402,6 @@ class MainWindow(QtWidgets.QMainWindow):
                     pass
                 self._tray_tip_shown = True
         else:
-            # gerçekten kapat
             self._allow_close = True
             QtWidgets.qApp.quit()
 
@@ -474,21 +516,16 @@ class MainWindow(QtWidgets.QMainWindow):
     def _set_startup(self, enable: bool):
         try:
             if enable:
-                # winshell gerekli
-                try:
-                    import winshell  # pip install winshell
-                except Exception:
-                    QtWidgets.QMessageBox.warning(
-                        self, "Gerekli Paket",
-                        "Windows ile başlat özelliği için 'winshell' paketini yükleyin:\n\npip install winshell"
-                    )
-                    # Menüdeki checkbox'ı eski haline al
+                if not ensure_winshell_installed(self):
                     self._build_settings_menu()
                     return
 
+                import winshell  # noqa: F401
                 os.makedirs(STARTUP_FOLDER, exist_ok=True)
+
                 exe_path, args = _launcher_paths()
                 icon_loc = (os.path.abspath("icons/app.ico"), 0) if os.path.exists("icons/app.ico") else (exe_path, 0)
+
                 with winshell.shortcut(APP_SHORTCUT) as link:
                     link.path = exe_path
                     link.arguments = args
@@ -500,7 +537,6 @@ class MainWindow(QtWidgets.QMainWindow):
         except Exception as e:
             QtWidgets.QMessageBox.warning(self, "Hata", f"Başlangıç ayarı değiştirilemedi:\n{e}")
         finally:
-            # Menü durumunu senkronize et
             self._build_settings_menu()
 
     def _on_monitor_chosen(self, action: QtWidgets.QAction):
