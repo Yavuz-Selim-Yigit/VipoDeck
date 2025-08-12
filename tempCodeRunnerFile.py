@@ -1,4 +1,4 @@
-# app.py — VipoDeck (modern üst bar + System Tray + "Kapatınca tepsiye gizle" ayarı)
+# app.py — VipoDeck (frameless + 1 satır modern üst bar + System Tray)
 import sys, json, time, threading, subprocess, webbrowser
 from pathlib import Path
 from PyQt5 import QtCore, QtGui, QtWidgets
@@ -71,7 +71,7 @@ class TitleBar(QtWidgets.QWidget):
         self._drag_offset = QtCore.QPoint()
         self.setFixedHeight(40)
 
-        # left: app icon + quick tools
+        # left area: app icon + menu icon buttons
         self.leftWrap = QtWidgets.QWidget()
         l = QtWidgets.QHBoxLayout(self.leftWrap)
         l.setContentsMargins(8, 0, 0, 0)
@@ -95,17 +95,11 @@ class TitleBar(QtWidgets.QWidget):
         self.btnTopRight.toggled.connect(self.toprightToggled.emit)
         l.addWidget(self.btnTopRight)
 
-        # monitor menu
+        # monitor menu (popup menu atanacak)
         self.btnMonitor = self._tool("icons/screen.png", tooltip="Monitör Seç")
         self.btnMonitor.setPopupMode(QtWidgets.QToolButton.InstantPopup)
         self.btnMonitor.setMenu(QtWidgets.QMenu(self))
         l.addWidget(self.btnMonitor)
-
-        # settings (popup menu: minimize-to-tray toggle)
-        self.btnSettings = self._tool("icons/settings.png", tooltip="Ayarlar")
-        self.btnSettings.setPopupMode(QtWidgets.QToolButton.InstantPopup)
-        self.btnSettings.setMenu(QtWidgets.QMenu(self))
-        l.addWidget(self.btnSettings)
 
         # open config
         self.btnCfg = self._tool("icons/jsondocument.png", tooltip="Ayar Dosyasını Aç")
@@ -131,7 +125,7 @@ class TitleBar(QtWidgets.QWidget):
         self.btnMin.clicked.connect(self.minimizeRequested)
         r.addWidget(self.btnMin)
 
-        self.btnClose = self._tool("icons/exit.png", tooltip="Kapat")
+        self.btnClose = self._tool("icons/exit.png", tooltip="Kapat (Tepsiye Gizle)")
         self.btnClose.clicked.connect(self.closeRequested)
         r.addWidget(self.btnClose)
 
@@ -156,6 +150,7 @@ class TitleBar(QtWidgets.QWidget):
         b.setAutoRaise(True)
         return b
 
+    # theming
     def applyStyle(self, dark: bool):
         if dark:
             bg = "#0f172a"; fg = "#e2e8f0"; hover = "#1f2a44"
@@ -168,7 +163,7 @@ class TitleBar(QtWidgets.QWidget):
             QToolButton:hover {{ background:{hover}; border-radius:6px; }}
         """)
 
-    # drag move (frameless)
+    # dragging (frameless)
     def mousePressEvent(self, e: QtGui.QMouseEvent):
         if e.button() == QtCore.Qt.LeftButton:
             self._drag = True
@@ -234,7 +229,7 @@ class MainWindow(QtWidgets.QMainWindow):
         self.setWindowFlags(self.windowFlags() | QtCore.Qt.FramelessWindowHint)
 
         # shortcuts
-        QtWidgets.QShortcut(QtGui.QKeySequence("Esc"), self, activated=self.close)  # davranış closeEvent'e göre
+        QtWidgets.QShortcut(QtGui.QKeySequence("Esc"), self, activated=self.close)             # tepsiye gizle
         QtWidgets.QShortcut(QtGui.QKeySequence("Ctrl+M"), self, activated=self.showMinimized)
 
         # settings
@@ -242,7 +237,6 @@ class MainWindow(QtWidgets.QMainWindow):
         self.theme = self.settings.value("theme", "light")
         self.start_top_right = self.settings.value("start_top_right", True, type=bool)
         self.saved_monitor_name = self.settings.value("monitor_name", "", type=str)
-        self.minimize_to_tray = self.settings.value("minimize_to_tray", True, type=bool)  # << yeni ayar
         self.palette = DARK if self.theme == "dark" else LIGHT
 
         # title bar
@@ -252,7 +246,7 @@ class MainWindow(QtWidgets.QMainWindow):
         self.titleBar.openConfigRequested.connect(self._open_config)
         self.titleBar.reloadRequested.connect(self._reload_config)
         self.titleBar.minimizeRequested.connect(self.showMinimized)
-        self.titleBar.closeRequested.connect(self.close)
+        self.titleBar.closeRequested.connect(self.close)  # closeEvent'te tepsiye gizlenecek
 
         # central UI
         self._build_ui()
@@ -271,9 +265,8 @@ class MainWindow(QtWidgets.QMainWindow):
         self.cfg = load_config()
         self._rebuild_cards()
 
-        # monitor & settings menus
+        # monitor menu
         self._rebuild_monitor_menu()
-        self._build_settings_menu()  # << Ayarlar menüsü (minimize_to_tray)
 
         # place titlebar as the menu widget (top single row)
         self.setMenuWidget(self.titleBar)
@@ -311,6 +304,7 @@ class MainWindow(QtWidgets.QMainWindow):
         self.tray.show()
 
     def _tray_activated(self, reason):
+        # Çift tıklama veya simge tıklama ile geri getir
         if reason == QtWidgets.QSystemTrayIcon.DoubleClick:
             self._restore_from_tray()
 
@@ -324,26 +318,18 @@ class MainWindow(QtWidgets.QMainWindow):
         QtWidgets.qApp.quit()
 
     def closeEvent(self, event: QtGui.QCloseEvent):
+        # Pencereyi kapatmak yerine tepsiye gizle
         if self._allow_close:
             return super().closeEvent(event)
-        if self.minimize_to_tray:
-            event.ignore()
-            self.hide()
-            if not self._tray_tip_shown and self.tray.isVisible():
-                try:
-                    self.tray.showMessage(
-                        "VipoDeck",
-                        "Arka planda çalışmaya devam ediyor.\nTepsideki simgeye çift tıklayarak geri getirebilirsiniz.",
-                        QtWidgets.QSystemTrayIcon.Information,
-                        3500
-                    )
-                except Exception:
-                    pass
-                self._tray_tip_shown = True
-        else:
-            # gerçekten kapat
-            self._allow_close = True
-            QtWidgets.qApp.quit()
+        event.ignore()
+        self.hide()
+        if not self._tray_tip_shown and self.tray.isVisible():
+            # sadece ilk kez bilgi ver
+            try:
+                self.tray.showMessage("VipoDeck", "Arka planda çalışmaya devam ediyor.\nTepsideki simgeye çift tıklayarak geri getirebilirsiniz.", QtWidgets.QSystemTrayIcon.Information, 3500)
+            except Exception:
+                pass
+            self._tray_tip_shown = True
 
     # ----- status bar -----
     def _build_statusbar(self):
@@ -353,7 +339,7 @@ class MainWindow(QtWidgets.QMainWindow):
 
     def _update_statusbar_text(self):
         self.status.setStyleSheet(f"color:{self.palette['text_color']}; font-size:12px;")
-        self.status.showMessage("ViperaDev | v1.3.2")
+        self.status.showMessage("ViperaDev © 2025 | by yselimygt | v1.3.2")
 
     # ----- UI -----
     def _build_ui(self):
@@ -379,6 +365,7 @@ class MainWindow(QtWidgets.QMainWindow):
         self.palette = DARK if dark else LIGHT
         self.titleBar.applyStyle(dark)
         self.setStyleSheet(f"QMainWindow {{ background:{self.palette['bg']}; }}")
+        # refresh cards
         for i in range(self.grid.count()):
             w = self.grid.itemAt(i).widget()
             if isinstance(w, CardButton):
@@ -393,7 +380,7 @@ class MainWindow(QtWidgets.QMainWindow):
         pos_icon = "icons/topright.png" if self.start_top_right else "icons/free.png"
         self.titleBar.btnTopRight.setIcon(QtGui.QIcon(pos_icon))
 
-    # ----- monitor & settings menus -----
+    # ----- monitor menu -----
     def _rebuild_monitor_menu(self):
         m = QtWidgets.QMenu(self)
         group = QtWidgets.QActionGroup(m)
@@ -424,21 +411,10 @@ class MainWindow(QtWidgets.QMainWindow):
         group.triggered.connect(self._on_monitor_chosen)
         self.titleBar.btnMonitor.setMenu(m)
 
-    def _build_settings_menu(self):
-        m = QtWidgets.QMenu(self)
-        act_min_to_tray = QtWidgets.QAction("Kapatınca tepsiye gizle", m, checkable=True)
-        act_min_to_tray.setChecked(self.minimize_to_tray)
-        act_min_to_tray.toggled.connect(self._toggle_minimize_to_tray)
-        m.addAction(act_min_to_tray)
-        self.titleBar.btnSettings.setMenu(m)
-
-    def _toggle_minimize_to_tray(self, checked: bool):
-        self.minimize_to_tray = checked
-        self.settings.setValue("minimize_to_tray", checked)
-
     def _on_monitor_chosen(self, action: QtWidgets.QAction):
         self.saved_monitor_name = action.data() or ""
         self.settings.setValue("monitor_name", self.saved_monitor_name)
+        # seçime göre yeniden konumlandır
         if self.start_top_right:
             self._move_to_selected_screen_top_right()
         else:
