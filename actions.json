@@ -8,7 +8,9 @@
           "icon": "icons/gpt.png",
           "type": "open",
           "target": "https://chat.openai.com",
-          "categories": "AI"
+          "categories": [
+            "AI"
+          ]
         },
         {
           "label": "VS Code",
@@ -25,14 +27,18 @@
           "icon": "icons/unreal.png",
           "type": "open",
           "target": "C:/Program Files/Epic Games/UE_5.6/Engine/Binaries/Win64/UnrealEditor.exe",
-          "categories": "Game Dev"
+          "categories": [
+            "Game Dev"
+          ]
         },
         {
           "label": "Unity",
           "icon": "icons/unity.png",
           "type": "open",
           "target": "C:/Program Files/Unity Hub/Unity Hub.exe",
-          "categories": "Game Dev"
+          "categories": [
+            "Game Dev"
+          ]
         },
         {
           "label": "Blender",
@@ -49,7 +55,9 @@
           "icon": "icons/youtube.png",
           "type": "open",
           "target": "https://youtube.com",
-          "categories": "Web"
+          "categories": [
+            "Web"
+          ]
         },
         {
           "label": "YouTube Music",
@@ -76,7 +84,9 @@
           "icon": "icons/githubweb.png",
           "type": "open",
           "target": "https://github.com",
-          "categories": "Yazılım"
+          "categories": [
+            "Yazılım"
+          ]
         },
         {
           "label": "GitHub Desktop",
@@ -93,14 +103,18 @@
           "icon": "icons/google.png",
           "type": "open",
           "target": "https://google.com",
-          "categories": "Web"
+          "categories": [
+            "Web"
+          ]
         },
         {
           "label": "Gmail",
           "icon": "icons/gmail.png",
           "type": "open",
           "target": "https://mail.google.com",
-          "categories": "İletişim"
+          "categories": [
+            "İletişim"
+          ]
         },
         {
           "label": "Google Drive",
@@ -117,14 +131,18 @@
           "icon": "icons/canva.png",
           "type": "open",
           "target": "C:/Users/USERNAME/AppData/Local/Programs/Canva/Canva.exe",
-          "categories": "Tasarım"
+          "categories": [
+            "Tasarım"
+          ]
         },
         {
           "label": "Figma",
           "icon": "icons/figma.png",
           "type": "open",
           "target": "C:/Users/USERNAME/AppData/Local/Figma/app-124.1.16/Figma.exe",
-          "categories": "Tasarım"
+          "categories": [
+            "Tasarım"
+          ]
         }
       ]
     }
