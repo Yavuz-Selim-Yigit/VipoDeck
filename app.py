@@ -1,4 +1,4 @@
-# app.py — VipoDeck v1.4.5
+# app.py — ViperaDeck v1.4.5
 # Tema: Karanlık + Aydınlık tam destek (kalıcı). Enter=Tamam düzeltmesi korunur.
 # Diğerleri: Sol menü, profil yönetimi, kısayol CRUD, arama+kategori, tray, startup,
 # global hotkey (Ctrl+V+D), tam ekran, her zaman üstte, monitör seçimi.
@@ -8,9 +8,9 @@ from pathlib import Path
 from PyQt5 import QtCore, QtGui, QtWidgets
 import pyautogui, keyboard
 
-APP_NAME   = "VipoDeck"
+APP_NAME   = "ViperaDeck"
 ORG        = "ViperaDev"
-APP        = "VipoDeck"
+APP        = "ViperaDeck"
 CONFIG_PATH = Path(__file__).with_name("actions.json")
 
 # Paletler (uyumlu ve yüksek kontrast)
