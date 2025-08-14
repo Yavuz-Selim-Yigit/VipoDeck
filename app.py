@@ -1,8 +1,7 @@
-# app.py — VipoDeck v1.4.4
-# Özellikler: Sol dikey menü (ikon-only) + Profil yönetimi (ekle/yeniden adlandır/sil) +
-# Kısayol ekle/düzenle/sil arayüzü + Arama & Kategori filtresi +
-# System Tray + Windows ile Başlat (winshell) + Global Hotkey (Ctrl+V+D) +
-# Tam ekran + Her zaman üstte + Monitör seçimi + Sağ üst/serbest konum
+# app.py — VipoDeck v1.4.4-fix
+# Düzeltmeler: Enter = Tamam (dialoglar), koyu tema tüm arka planlarda tutarlı
+# Özellikler: Sol menü, profil yönetimi, kısayol CRUD, arama+kategori,
+# system tray, Windows ile başlat, global hotkey (Ctrl+V+D), tam ekran, her zaman üstte, monitör seçimi
 
 import sys, os, json, time, subprocess, webbrowser
 from pathlib import Path
@@ -14,9 +13,8 @@ ORG        = "ViperaDev"
 APP        = "VipoDeck"
 CONFIG_PATH = Path(__file__).with_name("actions.json")
 
-# Tek koyu palet (uyumlu)
 PALETTE = {
-    "bg": "#0e1726",          # üst/arka lacivert
+    "bg": "#0e1726",          # ana arka plan
     "fg": "#e2e8f0",
     "muted": "#94a3b8",
     "card_bg": "#111827",
@@ -25,13 +23,12 @@ PALETTE = {
     "text_color": "#ffffff"
 }
 
-# Windows Startup (kısayol)
 STARTUP_FOLDER = os.path.join(
     os.environ.get("APPDATA", ""), "Microsoft", "Windows", "Start Menu", "Programs", "Startup"
 )
 APP_SHORTCUT = os.path.join(STARTUP_FOLDER, f"{APP_NAME}.lnk")
 
-# ---------------- helpers ----------------
+# ---------- helpers ----------
 def _launcher_paths():
     if getattr(sys, "frozen", False):
         return sys.executable, ""
@@ -53,9 +50,7 @@ def _save_config(data: dict):
         pass
 
 def _as_list_categories(v):
-    """categories alanını daima listeye çevirir."""
-    if not v:
-        return []
+    if not v: return []
     if isinstance(v, str):
         s = v.strip()
         return [s] if s else []
@@ -64,25 +59,17 @@ def _as_list_categories(v):
     return []
 
 def _normalize_config():
-    """actions.json'u profil yapısına ve kategori listesine normalize eder."""
     raw = _load_raw_config()
-    # Eski format -> Default profile
     if "profiles" not in raw or "active_profile" not in raw:
         buttons = raw.get("buttons", [])
-        store = {
-            "active_profile": "Default",
-            "profiles": {"Default": {"buttons": buttons}}
-        }
+        store = {"active_profile": "Default", "profiles": {"Default": {"buttons": buttons}}}
     else:
         store = raw
-
-    # Tüm kartlarda categories alanını listeleştir
+    # categories'i listeleştir
     for prof in store.get("profiles", {}).values():
         for b in prof.get("buttons", []):
             b["categories"] = _as_list_categories(b.get("categories"))
-
-    # Düzeltilmiş veriyi geri yaz (istersen bu satırı kaldırabilirsin)
-    _save_config(store)
+    _save_config(store)  # düzeltilmiş hâli geri yaz
     return store
 
 def load_config():
@@ -138,14 +125,14 @@ def ensure_winshell_installed(parent=None) -> bool:
     except Exception:
         return False
 
-# ---------------- Dialoglar ----------------
+# ---------- Dialoglar ----------
 class ShortcutEditor(QtWidgets.QDialog):
-    """Yeni/Düzenle kısayol dialogu."""
     def __init__(self, parent=None, data=None):
         super().__init__(parent)
         self.setWindowTitle("Kısayol")
         self.setModal(True)
         self.resize(420, 320)
+        self.setWindowFlags(self.windowFlags() & ~QtCore.Qt.WindowContextHelpButtonHint)
 
         self.le_label = QtWidgets.QLineEdit()
         self.le_icon  = QtWidgets.QLineEdit()
@@ -175,17 +162,22 @@ class ShortcutEditor(QtWidgets.QDialog):
 
         self.btn_ok = QtWidgets.QPushButton("Kaydet")
         self.btn_cancel = QtWidgets.QPushButton("Vazgeç")
+        # Enter = Kaydet
+        self.btn_ok.setDefault(True); self.btn_ok.setAutoDefault(True)
+        self.btn_cancel.setAutoDefault(False)
+        self.le_label.returnPressed.connect(self.accept)
+        self.le_icon.returnPressed.connect(self.accept)
+        self.le_target.returnPressed.connect(self.accept)
+        self.le_keys.returnPressed.connect(self.accept)
+        self.le_categories.returnPressed.connect(self.accept)
         self.btn_ok.clicked.connect(self.accept)
         self.btn_cancel.clicked.connect(self.reject)
+
         btns = QtWidgets.QHBoxLayout()
-        btns.addStretch(1)
-        btns.addWidget(self.btn_cancel)
-        btns.addWidget(self.btn_ok)
+        btns.addStretch(1); btns.addWidget(self.btn_cancel); btns.addWidget(self.btn_ok)
 
         lay = QtWidgets.QVBoxLayout(self)
-        lay.addLayout(form)
-        lay.addStretch(1)
-        lay.addLayout(btns)
+        lay.addLayout(form); lay.addStretch(1); lay.addLayout(btns)
 
         if data:
             self.le_label.setText(data.get("label", ""))
@@ -197,14 +189,6 @@ class ShortcutEditor(QtWidgets.QDialog):
 
         self._toggle_fields()
         self.cb_type.currentTextChanged.connect(self._toggle_fields)
-        self._apply_dialog_theme()
-
-    def _apply_dialog_theme(self):
-        pal = self.palette()
-        pal.setColor(QtGui.QPalette.Base, QtGui.QColor(PALETTE["card_bg"]))
-        pal.setColor(QtGui.QPalette.Text, QtGui.QColor(PALETTE["text_color"]))
-        for w in (self.le_label, self.le_icon, self.le_target, self.le_keys, self.le_categories):
-            w.setPalette(pal)
 
     def _toggle_fields(self):
         t = self.cb_type.currentText()
@@ -236,15 +220,26 @@ class ProfileNameDialog(QtWidgets.QDialog):
     def __init__(self, title="Profil", initial=""):
         super().__init__()
         self.setWindowTitle(title); self.setModal(True)
+        self.setWindowFlags(self.windowFlags() & ~QtCore.Qt.WindowContextHelpButtonHint)
+
         self.le = QtWidgets.QLineEdit(); self.le.setText(initial)
-        btn_ok = QtWidgets.QPushButton("Tamam"); btn_cancel = QtWidgets.QPushButton("Vazgeç")
-        btn_ok.clicked.connect(self.accept); btn_cancel.clicked.connect(self.reject)
+        self.le.returnPressed.connect(self.accept)  # Enter = Tamam
+
+        self.btn_ok = QtWidgets.QPushButton("Tamam")
+        self.btn_cancel = QtWidgets.QPushButton("Vazgeç")
+        # Enter = Tamam
+        self.btn_ok.setDefault(True); self.btn_ok.setAutoDefault(True)
+        self.btn_cancel.setAutoDefault(False)
+
+        self.btn_ok.clicked.connect(self.accept); self.btn_cancel.clicked.connect(self.reject)
+
         form = QtWidgets.QFormLayout(); form.addRow("Profil Adı:", self.le)
-        h = QtWidgets.QHBoxLayout(); h.addStretch(1); h.addWidget(btn_cancel); h.addWidget(btn_ok)
+        h = QtWidgets.QHBoxLayout(); h.addStretch(1); h.addWidget(self.btn_cancel); h.addWidget(self.btn_ok)
         lay = QtWidgets.QVBoxLayout(self); lay.addLayout(form); lay.addLayout(h)
+
     def text(self): return self.le.text().strip()
 
-# ---------------- Kart Buton ----------------
+# ---------- Kart ----------
 class CardButton(QtWidgets.QPushButton):
     def __init__(self, data, palette):
         super().__init__()
@@ -289,7 +284,7 @@ class CardButton(QtWidgets.QPushButton):
         elif a == act_del and hasattr(mw, "delete_card"):
             mw.delete_card(self)
 
-# ---------------- Ana Pencere ----------------
+# ---------- Main ----------
 class MainWindow(QtWidgets.QMainWindow):
     def __init__(self):
         super().__init__()
@@ -298,9 +293,8 @@ class MainWindow(QtWidgets.QMainWindow):
         self.setMinimumSize(600, 380)
         self.setWindowFlags(self.windowFlags() | QtCore.Qt.FramelessWindowHint)
 
-        # Ayarlar
         self.settings = QtCore.QSettings(ORG, APP)
-        self.theme = self.settings.value("theme", "dark")  # tek koyu
+        self.theme = "dark"
         self.start_top_right = self.settings.value("start_top_right", True, type=bool)
         self.saved_monitor_name = self.settings.value("monitor_name", "", type=str)
         self.minimize_to_tray = self.settings.value("minimize_to_tray", True, type=bool)
@@ -309,8 +303,6 @@ class MainWindow(QtWidgets.QMainWindow):
         self.always_on_top = self.settings.value("always_on_top", False, type=bool)
 
         self.palette = PALETTE
-
-        # Veri
         self.store = load_config()
         self.active_profile = self.store.get("active_profile") or "Default"
         if self.active_profile not in self.store.get("profiles", {}):
@@ -319,19 +311,14 @@ class MainWindow(QtWidgets.QMainWindow):
         self._build_topbar()
         self._build_central()
 
-        # Tray
         self._allow_close = False
         self._tray_tip_shown = False
         self._setup_tray()
 
-        # Tema & ikonlar
         self._apply_theme()
         self._update_toolbar_icons()
-
-        # Öğeler
         self._rebuild_cards()
 
-        # Menüler
         self._rebuild_monitor_menu()
         self._build_settings_menu()
         self._build_profile_menu()
@@ -339,31 +326,25 @@ class MainWindow(QtWidgets.QMainWindow):
         QtCore.QTimer.singleShot(0, self._place_on_start)
         self._apply_always_on_top(self.always_on_top)
 
-        # Global hotkey
         self._hotkey_registered = False
         if self.enable_global_hotkey:
             self._register_global_hotkey()
-
-        # Fullscreen başlangıç
         if self.fullscreen_mode:
             self._enter_fullscreen()
 
-        # Ekran listesi güncel kalsın
         QtWidgets.QApplication.instance().screenAdded.connect(lambda s: self._rebuild_monitor_menu())
         QtWidgets.QApplication.instance().screenRemoved.connect(lambda s: self._rebuild_monitor_menu())
 
-        self.btn_theme.setChecked(True)  # tek koyu tema
+        self.btn_theme.setChecked(True)
         self.btn_pos.setChecked(self.start_top_right)
 
-    # ---------- ÜST BAR ----------
+    # ---- ÜST BAR ----
     def _build_topbar(self):
         self.titleBar = QtWidgets.QWidget()
         self.titleBar.setFixedHeight(40)
         h = QtWidgets.QHBoxLayout(self.titleBar); h.setContentsMargins(8,0,8,0); h.setSpacing(6)
 
-        # LOGO
-        self.logo_label = QtWidgets.QLabel()
-        self.logo_label.setFixedSize(22, 22)
+        self.logo_label = QtWidgets.QLabel(); self.logo_label.setFixedSize(22, 22)
         app_icon = QtGui.QIcon("icons/app.ico")
         if not app_icon.isNull():
             self.logo_label.setPixmap(app_icon.pixmap(22, 22))
@@ -386,11 +367,9 @@ class MainWindow(QtWidgets.QMainWindow):
         h.addWidget(self.btn_min)
         h.addWidget(self.btn_close)
 
-        # sürükleme
         self._drag = False; self._drag_offset = QtCore.QPoint()
         self.titleBar.installEventFilter(self)
 
-        # Status bar
         self.status = self.statusBar(); self.status.setSizeGripEnabled(False)
         self._update_statusbar_text()
 
@@ -403,18 +382,16 @@ class MainWindow(QtWidgets.QMainWindow):
                 self._drag_offset = ev.globalPos() - self.frameGeometry().topLeft()
                 return True
             elif ev.type() == QtCore.QEvent.MouseMove and self._drag and (ev.buttons() & QtCore.Qt.LeftButton):
-                self.move(ev.globalPos() - self._drag_offset)
-                return True
+                self.move(ev.globalPos() - self._drag_offset); return True
             elif ev.type() == QtCore.QEvent.MouseButtonRelease:
-                self._drag = False
-                return True
+                self._drag = False; return True
         return super().eventFilter(obj, ev)
 
     def _update_statusbar_text(self):
         self.status.setStyleSheet(f"color:{self.palette['text_color']}; font-size:12px;")
         self.status.showMessage("ViperaDev | v1.4.4")
 
-    # ---------- MERKEZ ----------
+    # ---- MERKEZ ----
     def _build_central(self):
         root = QtWidgets.QWidget(); self.setCentralWidget(root)
         h = QtWidgets.QVBoxLayout(root); h.setContentsMargins(0,0,0,0); h.setSpacing(0)
@@ -423,7 +400,6 @@ class MainWindow(QtWidgets.QMainWindow):
         content = QtWidgets.QWidget(); h2 = QtWidgets.QHBoxLayout(content)
         h2.setContentsMargins(0,0,0,0); h2.setSpacing(0)
 
-        # Sol dikey menü
         self.sidebar = QtWidgets.QFrame(); self.sidebar.setFixedWidth(56)
         v = QtWidgets.QVBoxLayout(self.sidebar); v.setContentsMargins(6,6,6,6); v.setSpacing(6)
 
@@ -456,11 +432,11 @@ class MainWindow(QtWidgets.QMainWindow):
         self.btn_add = self._sbtn("icons/plus.png", "Yeni Kısayol")
         self.btn_add.clicked.connect(self.add_shortcut); v.addWidget(self.btn_add)
 
-        v.addStretch(1)  # altta min/close yok
+        v.addStretch(1)
 
-        # Sağ: Arama+Kategori ve Grid
-        right = QtWidgets.QWidget(); vr = QtWidgets.QVBoxLayout(right)
-        vr.setContentsMargins(8,6,8,8); vr.setSpacing(6)
+        # Sağ
+        right = QtWidgets.QWidget(); right.setObjectName("RightArea")
+        vr = QtWidgets.QVBoxLayout(right); vr.setContentsMargins(8,6,8,8); vr.setSpacing(6)
 
         top_tools = QtWidgets.QHBoxLayout()
         self.search = QtWidgets.QLineEdit(); self.search.setPlaceholderText("Ara...")
@@ -471,11 +447,15 @@ class MainWindow(QtWidgets.QMainWindow):
         top_tools.addWidget(self.category, 1)
         vr.addLayout(top_tools)
 
-        self.scroll = QtWidgets.QScrollArea(); self.scroll.setWidgetResizable(True); self.scroll.setFrameShape(QtWidgets.QFrame.NoFrame)
-        self.canvas = QtWidgets.QWidget()
+        self.scroll = QtWidgets.QScrollArea()
+        self.scroll.setWidgetResizable(True)
+        self.scroll.setFrameShape(QtWidgets.QFrame.NoFrame)
+
+        self.canvas = QtWidgets.QWidget(); self.canvas.setObjectName("Canvas")
         self.grid = QtWidgets.QGridLayout(self.canvas)
         self.grid.setContentsMargins(0, 0, 0, 0)
         self.grid.setHorizontalSpacing(10); self.grid.setVerticalSpacing(10)
+
         self.scroll.setWidget(self.canvas)
         vr.addWidget(self.scroll, 1)
 
@@ -492,7 +472,7 @@ class MainWindow(QtWidgets.QMainWindow):
         b.setAutoRaise(True)
         return b
 
-    # ---------- Tray ----------
+    # ---- Tray ----
     def _setup_tray(self):
         icon_path = "icons/app.ico"
         self.tray = QtWidgets.QSystemTrayIcon(QtGui.QIcon(icon_path), self)
@@ -529,25 +509,30 @@ class MainWindow(QtWidgets.QMainWindow):
             self._allow_close = True
             QtWidgets.qApp.quit()
 
-    # ---------- Tema ----------
+    # ---- Tema (UYGULAMA GENELİ QSS) ----
     def _apply_theme(self):
         self.palette = PALETTE
-        # üst bar ve başlık
+
+        # üst bar ve sidebar özel stiller
         self.titleBar.setStyleSheet(f"background:{self.palette['bg']};")
         self.lbl_title.setStyleSheet(f"color:{self.palette['fg']}; font-weight:600;")
-
-        # sidebar
-        self.sidebar.setStyleSheet(
-            "QFrame { background: rgba(255,255,255,0.03); border-right:1px solid rgba(255,255,255,0.10); }"
-        )
+        self.sidebar.setStyleSheet("QFrame { background: rgba(255,255,255,0.03); border-right:1px solid rgba(255,255,255,0.10); }")
 
         base_bg    = self.palette['card_bg']
         base_fg    = self.palette['text_color']
         border_col = self.palette['card_border']
         hover_bg   = self.palette['card_hover']
+        win_bg     = self.palette['bg']
 
-        main_css = f"""
-        QMainWindow {{ background:{self.palette['bg']}; }}
+        app_qss = f"""
+        QMainWindow {{ background:{win_bg}; }}
+
+        /* Sağ alan & Canvas ve scroll viewport şeffaf – açık gri pano sorunu giderildi */
+        #RightArea {{ background:{win_bg}; }}
+        #Canvas {{ background: transparent; }}
+        QScrollArea {{ background: transparent; border: 0; }}
+        QScrollArea > viewport {{ background: transparent; }}
+
         QLineEdit {{
             background: {base_bg};
             color: {base_fg};
@@ -557,6 +542,7 @@ class MainWindow(QtWidgets.QMainWindow):
             selection-background-color: {hover_bg};
             selection-color: {base_fg};
         }}
+
         QComboBox {{
             background: {base_bg};
             color: {base_fg};
@@ -573,15 +559,24 @@ class MainWindow(QtWidgets.QMainWindow):
             selection-color: {base_fg};
             outline: none;
         }}
-        QScrollBar:vertical {{
-            background: transparent; width: 10px; margin: 0px;
+
+        QPushButton {{
+            background: {base_bg};
+            color: {base_fg};
+            border: 1px solid {border_col};
+            border-radius: 8px;
+            padding: 6px 12px;
         }}
-        QScrollBar::handle:vertical {{
-            background: {border_col}; min-height: 24px; border-radius: 4px;
-        }}
+        QPushButton:hover {{ background: {hover_bg}; }}
+        QPushButton:default {{ border: 1px solid #60a5fa; }}
+
+        QScrollBar:vertical {{ background: transparent; width: 10px; margin: 0px; }}
+        QScrollBar::handle:vertical {{ background: {border_col}; min-height: 24px; border-radius: 4px; }}
         QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical {{ height: 0px; }}
         """
-        self.setStyleSheet(main_css)
+
+        # UYGULAMA GENELİ uygula (dialoglar dahil)
+        QtWidgets.QApplication.instance().setStyleSheet(app_qss)
 
         # kartları yenile
         for i in range(self.grid.count()):
@@ -594,13 +589,11 @@ class MainWindow(QtWidgets.QMainWindow):
         self._update_toolbar_icons()
 
     def _update_toolbar_icons(self):
-        # tek tema: koyu
-        theme_icon = "icons/dark-theme.png"
-        self.btn_theme.setIcon(QtGui.QIcon(theme_icon))
+        self.btn_theme.setIcon(QtGui.QIcon("icons/dark-theme.png"))
         pos_icon = "icons/topright.png" if self.start_top_right else "icons/free.png"
         self.btn_pos.setIcon(QtGui.QIcon(pos_icon))
 
-    # ---------- Menüler ----------
+    # ---- Menüler ----
     def _rebuild_monitor_menu(self):
         m = QtWidgets.QMenu(self)
         group = QtWidgets.QActionGroup(m); group.setExclusive(True)
@@ -648,7 +641,6 @@ class MainWindow(QtWidgets.QMainWindow):
         act_top.setChecked(self.always_on_top)
         act_top.toggled.connect(self._toggle_always_on_top)
         m.addAction(act_top)
-
         self.btn_settings.setMenu(m)
 
     def _build_profile_menu(self):
@@ -667,7 +659,7 @@ class MainWindow(QtWidgets.QMainWindow):
         m.addAction("Profili Sil", self._delete_profile)
         self.btn_profile.setMenu(m)
 
-    # ---------- Profiller ----------
+    # ---- Profiller ----
     def _on_profile_chosen(self, act: QtWidgets.QAction):
         name = act.data()
         if name and name in self.store.get("profiles", {}):
@@ -716,7 +708,7 @@ class MainWindow(QtWidgets.QMainWindow):
         self._build_profile_menu()
         self._rebuild_cards()
 
-    # ---------- Kısayol CRUD ----------
+    # ---- Kısayol CRUD ----
     def add_shortcut(self):
         dlg = ShortcutEditor(self)
         if dlg.exec_() == QtWidgets.QDialog.Accepted:
@@ -733,8 +725,7 @@ class MainWindow(QtWidgets.QMainWindow):
             arr = self.store["profiles"][self.active_profile]["buttons"]
             for i, b in enumerate(arr):
                 if b is data:
-                    arr[i] = newdata
-                    break
+                    arr[i] = newdata; break
             _save_config(self.store)
             self._rebuild_cards()
 
@@ -746,12 +737,10 @@ class MainWindow(QtWidgets.QMainWindow):
         _save_config(self.store)
         self._rebuild_cards()
 
-    # ---------- Konum & pencere ----------
+    # ---- Konum & pencere ----
     def _place_on_start(self):
-        if self.start_top_right:
-            self._move_to_selected_screen_top_right()
-        else:
-            self._center_on_selected_screen()
+        if self.start_top_right: self._move_to_selected_screen_top_right()
+        else: self._center_on_selected_screen()
 
     def _screen_geom(self):
         target = None
@@ -759,8 +748,7 @@ class MainWindow(QtWidgets.QMainWindow):
             for s in QtWidgets.QApplication.screens():
                 if s.name() == self.saved_monitor_name:
                     target = s; break
-        if not target:
-            target = QtWidgets.QApplication.primaryScreen()
+        if not target: target = QtWidgets.QApplication.primaryScreen()
         return target.availableGeometry() if target else None
 
     def _move_to_selected_screen_top_right(self):
@@ -775,7 +763,7 @@ class MainWindow(QtWidgets.QMainWindow):
         cy = g.center().y() - self.height()//2
         self.move(cx, cy)
 
-    # ---------- Grid & filtre ----------
+    # ---- Grid & filtre ----
     def _clear_grid(self):
         while self.grid.count():
             item = self.grid.takeAt(0); w = item.widget()
@@ -792,30 +780,24 @@ class MainWindow(QtWidgets.QMainWindow):
         self._clear_grid()
         buttons = self.store["profiles"].get(self.active_profile, {}).get("buttons", [])
 
-        # Kategori combobox'ını güncelle (varsa korur)
         existing_sel = self.category.currentText() if self.category.count() else "Tümü"
         self.category.blockSignals(True)
         self.category.clear(); self.category.addItem("Tümü")
-        for c in self._gather_categories(buttons):
-            self.category.addItem(c)
+        for c in self._gather_categories(buttons): self.category.addItem(c)
         idx = self.category.findText(existing_sel)
         self.category.setCurrentIndex(idx if idx >= 0 else 0)
         self.category.blockSignals(False)
 
-        # Filtre uygula
         q = (self.search.text() or "").lower()
         cat = self.category.currentText()
         filtered = []
         for b in buttons:
             if q:
                 txt = (b.get("label","") + " " + b.get("target","") + " " + " ".join(b.get("categories",[]))).lower()
-                if q not in txt:
-                    continue
-            if cat != "Tümü" and cat not in b.get("categories", []):
-                continue
+                if q not in txt: continue
+            if cat != "Tümü" and cat not in b.get("categories", []): continue
             filtered.append(b)
 
-        # Grid yerleşimi
         btn_w = 90; gap = 12
         inner_w = max(300, self.width() - self.sidebar.width() - 60)
         cols = max(3, min(8, (inner_w + gap) // (btn_w + gap)))
@@ -828,9 +810,8 @@ class MainWindow(QtWidgets.QMainWindow):
 
         self.status.showMessage(f"{len(filtered)} / {len(buttons)} öğe")
 
-    # ---------- Tema & ayarlar ----------
+    # ---- Tema & ayarlar ----
     def _toggle_theme(self, checked: bool):
-        # tek koyu tema
         self.settings.setValue("theme", "dark")
         self._apply_theme()
 
@@ -870,7 +851,6 @@ class MainWindow(QtWidgets.QMainWindow):
         finally:
             self._build_settings_menu()
 
-    # Global Hotkey
     def _toggle_global_hotkey(self, checked: bool):
         self.enable_global_hotkey = checked
         self.settings.setValue("enable_global_hotkey", checked)
@@ -885,26 +865,21 @@ class MainWindow(QtWidgets.QMainWindow):
     def _register_global_hotkey(self):
         try:
             def toggle_show():
-                if self.isHidden():
-                    self.show(); self.raise_(); self.activateWindow()
-                else:
-                    self.hide()
+                if self.isHidden(): self.show(); self.raise_(); self.activateWindow()
+                else: self.hide()
             self._hotkey_handle = keyboard.add_hotkey("ctrl+v+d", toggle_show, suppress=False, trigger_on_release=True)
             self._hotkey_registered = True
         except Exception:
             self._hotkey_registered = False
 
-    # Tam ekran & üstte
     def _toggle_fullscreen(self, checked: bool):
         self.fullscreen_mode = checked
         self.settings.setValue("fullscreen_mode", checked)
         if checked: self._enter_fullscreen()
         else: self._leave_fullscreen()
 
-    def _enter_fullscreen(self):
-        self.showFullScreen()
-    def _leave_fullscreen(self):
-        self.showNormal()
+    def _enter_fullscreen(self): self.showFullScreen()
+    def _leave_fullscreen(self): self.showNormal()
 
     def _toggle_always_on_top(self, checked: bool):
         self.always_on_top = checked
@@ -915,17 +890,14 @@ class MainWindow(QtWidgets.QMainWindow):
         flags = self.windowFlags()
         if enabled: flags |= QtCore.Qt.WindowStaysOnTopHint
         else:       flags &= ~QtCore.Qt.WindowStaysOnTopHint
-        self.setWindowFlags(flags)
-        self.show()
+        self.setWindowFlags(flags); self.show()
 
-    # Monitör seçimi
     def _on_monitor_chosen(self, action: QtWidgets.QAction):
         self.saved_monitor_name = action.data() or ""
         self.settings.setValue("monitor_name", self.saved_monitor_name)
         if self.start_top_right: self._move_to_selected_screen_top_right()
         else:                    self._center_on_selected_screen()
 
-    # Genel işlemler
     def _open_config(self):
         if CONFIG_PATH.exists():
             QtGui.QDesktopServices.openUrl(QtCore.QUrl.fromLocalFile(str(CONFIG_PATH)))
@@ -935,15 +907,13 @@ class MainWindow(QtWidgets.QMainWindow):
     def _reload_config(self):
         self.store = load_config()
         ap = self.store.get("active_profile", "Default")
-        if ap in self.store.get("profiles", {}):
-            self.active_profile = ap
-        else:
-            self.active_profile = next(iter(self.store.get("profiles", {"Default":{}}).keys()))
+        if ap in self.store.get("profiles", {}): self.active_profile = ap
+        else: self.active_profile = next(iter(self.store.get("profiles", {"Default":{}}).keys()))
         self._build_profile_menu()
         self._rebuild_cards()
         QtWidgets.QMessageBox.information(self, "Yenilendi", "actions.json yeniden yüklendi.")
 
-# ---------------- Çalıştır ----------------
+# ---------- run ----------
 def main():
     if hasattr(QtWidgets.QApplication, "setAttribute"):
         QtWidgets.QApplication.setAttribute(QtCore.Qt.AA_EnableHighDpiScaling, True)
@@ -953,8 +923,7 @@ def main():
     app.setOrganizationName(ORG); app.setApplicationName(APP_NAME)
     app.setWindowIcon(QtGui.QIcon("icons/app.ico"))
 
-    w = MainWindow()
-    w.show()
+    w = MainWindow(); w.show()
     sys.exit(app.exec_())
 
 if __name__ == "__main__":
