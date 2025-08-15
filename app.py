@@ -402,7 +402,7 @@ class MainWindow(QtWidgets.QMainWindow):
     def _update_statusbar_text(self):
         """Status bar bilgisini ve rengini ayarla."""
         self.status.setStyleSheet(f"color:{self.palette['text_color']}; font-size:12px;")
-        self.status.showMessage("ViperaDev | v1.4.5")
+        self.status.showMessage("ViperaDev | v1.5.0")
 
     # -------- Orta Alan (sol menü + sağ içerik) --------
     def _build_central(self):
